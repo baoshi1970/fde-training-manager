@@ -6,7 +6,10 @@ FDE 培训用的模拟项目（Spring Boot 3.3 / Java 17 / Thymeleaf / Spring Da
 
 - 测试：`./mvnw test`（Windows 用 `mvnw.cmd test`）。**改完代码一定要跑，并把结果给用户看**
 - 启动：`./mvnw spring-boot:run` → http://localhost:8080 （admin / admin123）
-- 数据库每次启动都会重建，种子数据在 `config/DataInitializer.java`
+- 本地数据库（H2）每次启动都会重建，种子数据在 `config/DataInitializer.java`
+- 部署环境（Vercel）用 Postgres（`application-prod.properties`），多个实例共用：
+  - 新增实体后，在 `DataInitializer.resetToSeed()` 里按外键依赖顺序先删掉它的数据
+  - 不要写只在单个实例内存里有效的状态（static 变量缓存等）
 
 ## 分层规则
 
