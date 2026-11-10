@@ -1,10 +1,16 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
 <head><title>主页 | 培训管理系统</title></head>
 <body>
 <section>
-    <h1>主页</h1>
+    <div class="page-head">
+        <h1>主页</h1>
+        <form sec:authorize="hasRole('ADMIN')" th:action="@{/admin/reset}" method="post"
+              onsubmit="return confirm('学员・讲师・课程・课次・报名会全部恢复成初始数据。确定吗？');">
+            <button type="submit" class="btn small danger">重置为初始数据</button>
+        </form>
+    </div>
     <div class="stats">
         <div class="stat"><div class="num" th:text="${activeTrainees}">5</div><div class="label">在籍学员</div></div>
         <div class="stat"><div class="num" th:text="${courseCount}">5</div><div class="label">课程</div></div>

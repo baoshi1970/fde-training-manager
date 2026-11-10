@@ -3,6 +3,7 @@ package com.example.training.config;
 import com.example.training.domain.*;
 import com.example.training.repository.*;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,8 +15,12 @@ import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
 
 /**
- * 启动时写入种子数据（H2 内存库，每次启动都重新写入）。
- * 人名・邮箱全部是虚构的。课次日期以「本周一」为基准，所以任何时候启动主页都有近期课次。
+ * 种子数据。
+ * - 启动时：数据库为空才写入（本地 H2 每次启动都是空的；部署环境的 Postgres 只在第一次写入）
+ * - 管理员在主页点「重置为初始数据」时：删掉业务数据，重新写入（{@link #resetToSeed()}）
+ * 人名・邮箱全部是虚构的。课次日期以「本周一」为基准，所以任何时候主页都有近期课次。
+ *
+ * ★新增实体（出勤・评分等）时：在 resetToSeed() 里先删掉它的数据（有外键，要按依赖顺序删）
  */
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -28,11 +33,12 @@ public class DataInitializer implements CommandLineRunner {
     private final EnrollmentRepository enrollmentRepo;
     private final PasswordEncoder encoder;
     private final Clock clock;
+    private final JdbcTemplate jdbc;
 
     public DataInitializer(AppUserRepository userRepo, TraineeRepository traineeRepo,
                            InstructorRepository instructorRepo, CourseRepository courseRepo,
                            CourseSessionRepository sessionRepo, EnrollmentRepository enrollmentRepo,
-                           PasswordEncoder encoder, Clock clock) {
+                           PasswordEncoder encoder, Clock clock, JdbcTemplate jdbc) {
         this.userRepo = userRepo;
         this.traineeRepo = traineeRepo;
         this.instructorRepo = instructorRepo;
@@ -41,20 +47,52 @@ public class DataInitializer implements CommandLineRunner {
         this.enrollmentRepo = enrollmentRepo;
         this.encoder = encoder;
         this.clock = clock;
+        this.jdbc = jdbc;
     }
 
     @Override
     @Transactional
     public void run(String... args) {
+        lockIfPostgres();
         if (userRepo.count() > 0) {
             return;
         }
-        LocalDate today = LocalDate.now(clock);
-        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        seedUsers();
+        seedBusinessData();
+    }
 
+    /** 删掉所有业务数据（登录用户保留），重新写入种子数据 */
+    @Transactional
+    public void resetToSeed() {
+        lockIfPostgres();
+        enrollmentRepo.deleteAllInBatch();
+        sessionRepo.deleteAllInBatch();
+        courseRepo.deleteAllInBatch();
+        instructorRepo.deleteAllInBatch();
+        traineeRepo.deleteAllInBatch();
+        seedBusinessData();
+    }
+
+    /**
+     * 部署环境可能同时启动多个实例：用 Postgres 的咨询锁让种子数据只写一次。
+     * （锁在事务结束时自动释放。H2 没有这个函数，跳过）
+     */
+    private void lockIfPostgres() {
+        String product = jdbc.execute((java.sql.Connection c) -> c.getMetaData().getDatabaseProductName());
+        if ("PostgreSQL".equals(product)) {
+            jdbc.queryForList("SELECT pg_advisory_xact_lock(727401)");
+        }
+    }
+
+    private void seedUsers() {
         // ---- 登录用户（README 里写有账号）----
         userRepo.save(new AppUser("admin", encoder.encode("admin123"), "管理员", AppUser.Role.ADMIN));
         userRepo.save(new AppUser("teacher", encoder.encode("teacher123"), "田中 讲师", AppUser.Role.INSTRUCTOR));
+    }
+
+    private void seedBusinessData() {
+        LocalDate today = LocalDate.now(clock);
+        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 
         // ---- 学员 ----
         Trainee t1 = traineeRepo.save(new Trainee("山田 太郎", "taro.yamada@example.com", "A 社 开发部", TraineeStatus.ACTIVE, monday.minusWeeks(3)));
