@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>学员管理 | 培训管理系统</title></head>
+<body>
+<section>
+    <div class="page-head">
+        <h1>学员管理</h1>
+        <a class="btn" th:href="@{/trainees/new}">＋ 新增学员</a>
+    </div>
+
+    <form class="search" th:action="@{/trainees}" method="get">
+        <input type="text" name="keyword" th:value="${keyword}" placeholder="姓名（部分一致）">
+        <select name="status">
+            <option value="">全部状态</option>
+            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.label}"
+                    th:selected="${s == status}">在籍</option>
+        </select>
+        <button type="submit" class="btn secondary">检索</button>
+        <a th:href="@{/trainees}">清除条件</a>
+    </form>
+
+    <table>
+        <thead><tr><th>ID</th><th>姓名</th><th>邮箱</th><th>所属</th><th>状态</th><th>入学日期</th><th>操作</th></tr></thead>
+        <tbody>
+        <tr th:each="t : ${trainees}">
+            <td th:text="${t.id}">1</td>
+            <td th:text="${t.name}">山田 太郎</td>
+            <td th:text="${t.email}">taro@example.com</td>
+            <td th:text="${t.affiliation}">A 社</td>
+            <td><span class="badge"
+                      th:classappend="${t.status.name() == 'ACTIVE'} ? 'done' : 'gray'"
+                      th:text="${t.status.label}">在籍</span></td>
+            <td th:text="${t.joinedOn}">2026-10-01</td>
+            <td class="actions">
+                <a class="btn small secondary" th:href="@{/trainees/{id}/edit(id=${t.id})}">编辑</a>
+                <form th:action="@{/trainees/{id}/delete(id=${t.id})}" method="post"
+                      onsubmit="return confirm('确定删除这名学员吗？');">
+                    <button type="submit" class="btn small danger">删除</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(trainees)}"><td colspan="7" class="empty">没有符合条件的学员</td></tr>
+        </tbody>
+    </table>
+</section>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>报名管理 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1>报名管理</h1>
+
+    <form class="search" th:action="@{/enrollments}" method="get">
+        <label>课程</label>
+        <select name="courseId" onchange="this.form.submit()">
+            <option th:each="c : ${courses}" th:value="${c.id}" th:text="${c.displayName}"
+                    th:selected="${c.id == courseId}">S2 AI 辅助编码</option>
+        </select>
+    </form>
+
+    <th:block th:if="${course != null}">
+        <h2 th:text="${course.displayName} + ' 的报名者（' + ${#lists.size(enrollments)} + ' 人）'">报名者</h2>
+
+        <form class="search" th:action="@{/enrollments}" method="post">
+            <input type="hidden" name="courseId" th:value="${course.id}">
+            <select name="traineeId">
+                <option th:each="t : ${activeTrainees}" th:value="${t.id}"
+                        th:text="${t.name + '（' + t.affiliation + '）'}">山田 太郎</option>
+            </select>
+            <button type="submit" class="btn">＋ 报名</button>
+            <span class="hint" style="color:var(--muted)">只能选择「在籍」学员</span>
+        </form>
+
+        <table>
+            <thead><tr><th>#</th><th>学员</th><th>所属</th><th>报名日</th><th>操作</th></tr></thead>
+            <tbody>
+            <tr th:each="e, st : ${enrollments}">
+                <td th:text="${st.count}">1</td>
+                <td th:text="${e.trainee.name}">山田 太郎</td>
+                <td th:text="${e.trainee.affiliation}">A 社</td>
+                <td th:text="${e.enrolledOn}">2026-11-01</td>
+                <td class="actions">
+                    <form th:action="@{/enrollments/{id}/cancel(id=${e.id})}" method="post"
+                          onsubmit="return confirm('确定取消这条报名吗？');">
+                        <input type="hidden" name="courseId" th:value="${course.id}">
+                        <button type="submit" class="btn small danger">取消报名</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(enrollments)}"><td colspan="5" class="empty">还没有人报名</td></tr>
+            </tbody>
+        </table>
+    </th:block>
+</section>
+</body>
+</html>

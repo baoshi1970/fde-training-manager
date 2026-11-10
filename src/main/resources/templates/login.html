@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登录 | 培训管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="login-wrap">
+    <form class="login" th:action="@{/login}" method="post">
+        <h1>培训管理系统</h1>
+        <div class="flash ng" th:if="${param.error}">用户名或密码不正确</div>
+        <div class="flash ok" th:if="${param.logout}">已退出登录</div>
+        <div class="field">
+            <label for="username">用户名</label>
+            <input type="text" id="username" name="username" autofocus required>
+        </div>
+        <div class="field">
+            <label for="password">密码</label>
+            <input type="password" id="password" name="password" required
+                   style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:4px;font:inherit;">
+        </div>
+        <button type="submit" class="btn">登录</button>
+    </form>
+</div>
+</body>
+</html>

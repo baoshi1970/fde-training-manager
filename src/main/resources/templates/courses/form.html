@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>课程编辑 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1 th:text="${course.id == null} ? '新增课程' : '编辑课程'">新增课程</h1>
+    <form class="form" th:object="${course}" method="post"
+          th:action="${course.id == null} ? @{/courses} : @{/courses/{id}(id=${course.id})}">
+        <div class="row">
+            <div class="field">
+                <label for="code">课程编号 *</label>
+                <input type="text" th:field="*{code}" placeholder="例：S2">
+                <div class="err" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></div>
+            </div>
+            <div class="field" style="flex:2">
+                <label for="name">课程名称 *</label>
+                <input type="text" th:field="*{name}">
+                <div class="err" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label for="category">类别 *</label>
+                <select th:field="*{category}">
+                    <option th:each="c : ${categories}" th:value="${c}" th:text="${c.label}">公共基础</option>
+                </select>
+                <div class="err" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></div>
+            </div>
+            <div class="field">
+                <label for="hours">学时（小时）*</label>
+                <input type="number" th:field="*{hours}" min="1" max="200">
+                <div class="err" th:if="${#fields.hasErrors('hours')}" th:errors="*{hours}"></div>
+            </div>
+        </div>
+        <div class="field">
+            <label><input type="checkbox" th:field="*{required}"> 必修</label>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn">保存</button>
+            <a class="btn secondary" th:href="@{/courses}">返回</a>
+        </div>
+    </form>
+</section>
+</body>
+</html>

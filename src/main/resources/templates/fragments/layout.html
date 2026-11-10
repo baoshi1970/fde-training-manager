@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:replace="${title}">培训管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" th:href="@{/}">培训管理系统</a>
+    <div class="user" th:if="${loginName != null}">
+        <span th:text="${loginName}">管理员</span>
+        <form th:action="@{/logout}" method="post" class="inline">
+            <button type="submit" class="btn-link">退出登录</button>
+        </form>
+    </div>
+</header>
+<div class="shell">
+    <!-- 主菜单：内容由 web/Feature.java 决定 -->
+    <nav class="menu">
+        <a th:href="@{/}" th:classappend="${currentPath == '/'} ? 'active'">主页</a>
+        <div class="menu-group">管理</div>
+        <th:block th:each="f : ${features}" th:if="${f.inMenu}">
+            <a th:if="${f.done}" th:href="@{${f.path}}" th:text="${f.name}"
+               th:classappend="${currentPath.startsWith(f.path)} ? 'active'">学员管理</a>
+            <span th:unless="${f.done}" class="disabled" th:title="${f.no + ' 未实装'}">
+                <span th:text="${f.name}">出勤登记</span>
+                <em class="tag" th:text="${f.no}">F6</em>
+            </span>
+        </th:block>
+    </nav>
+    <main class="content">
+        <div class="flash ok" th:if="${message}" th:text="${message}">已保存</div>
+        <div class="flash ng" th:if="${error}" th:text="${error}">错误</div>
+        <th:block th:replace="${content}"></th:block>
+    </main>
+</div>
+</body>
+</html>

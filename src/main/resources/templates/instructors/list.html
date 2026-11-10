@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>讲师管理 | 培训管理系统</title></head>
+<body>
+<section>
+    <div class="page-head">
+        <h1>讲师管理</h1>
+        <a class="btn" th:href="@{/instructors/new}">＋ 新增讲师</a>
+    </div>
+    <table>
+        <thead><tr><th>ID</th><th>姓名</th><th>邮箱</th><th>擅长领域</th><th>操作</th></tr></thead>
+        <tbody>
+        <tr th:each="i : ${instructors}">
+            <td th:text="${i.id}">1</td>
+            <td th:text="${i.name}">田中 诚</td>
+            <td th:text="${i.email}">tanaka@example.com</td>
+            <td th:text="${i.specialty}">Claude Code</td>
+            <td class="actions">
+                <a class="btn small secondary" th:href="@{/instructors/{id}/edit(id=${i.id})}">编辑</a>
+                <form th:action="@{/instructors/{id}/delete(id=${i.id})}" method="post"
+                      onsubmit="return confirm('确定删除这名讲师吗？');">
+                    <button type="submit" class="btn small danger">删除</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(instructors)}"><td colspan="5" class="empty">还没有讲师</td></tr>
+        </tbody>
+    </table>
+</section>
+</body>
+</html>

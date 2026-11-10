@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>课次排期 | 培训管理系统</title></head>
+<body>
+<section>
+    <div class="page-head">
+        <h1>课次排期</h1>
+        <a class="btn" th:href="@{/sessions/new}">＋ 新增课次</a>
+    </div>
+
+    <form class="search" th:action="@{/sessions}" method="get">
+        <select name="courseId">
+            <option value="">全部课程</option>
+            <option th:each="c : ${courses}" th:value="${c.id}" th:text="${c.displayName}"
+                    th:selected="${c.id == courseId}">S2 AI 辅助编码</option>
+        </select>
+        <button type="submit" class="btn secondary">筛选</button>
+    </form>
+
+    <table>
+        <thead><tr><th>日期</th><th>时段</th><th>课程</th><th>讲师</th><th>形式</th><th>地点</th><th>操作</th></tr></thead>
+        <tbody>
+        <tr th:each="s : ${sessions}">
+            <td th:text="${#temporals.format(s.date, 'yyyy-MM-dd (E)')}">2026-11-10</td>
+            <td th:text="${#temporals.format(s.startTime, 'HH:mm') + '–' + #temporals.format(s.endTime, 'HH:mm')}">19:30–21:00</td>
+            <td th:text="${s.course.displayName}">S2 AI 辅助编码</td>
+            <td th:text="${s.instructor.name}">田中 诚</td>
+            <td th:text="${s.mode.label}">线上</td>
+            <td th:text="${s.location}">Zoom</td>
+            <td class="actions">
+                <a class="btn small secondary" th:href="@{/sessions/{id}/edit(id=${s.id})}">编辑</a>
+                <form th:action="@{/sessions/{id}/delete(id=${s.id})}" method="post"
+                      onsubmit="return confirm('确定删除这个课次吗？');">
+                    <button type="submit" class="btn small danger">删除</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(sessions)}"><td colspan="7" class="empty">没有课次</td></tr>
+        </tbody>
+    </table>
+</section>
+</body>
+</html>

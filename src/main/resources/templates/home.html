@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>主页 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1>主页</h1>
+    <div class="stats">
+        <div class="stat"><div class="num" th:text="${activeTrainees}">5</div><div class="label">在籍学员</div></div>
+        <div class="stat"><div class="num" th:text="${courseCount}">5</div><div class="label">课程</div></div>
+        <div class="stat"><div class="num" th:text="${sessionsThisWeek}">3</div><div class="label">本周课次</div></div>
+    </div>
+
+    <h2>近期课次</h2>
+    <table>
+        <thead><tr><th>日期</th><th>时段</th><th>课程</th><th>讲师</th><th>形式</th><th>地点</th></tr></thead>
+        <tbody>
+        <tr th:each="s : ${upcoming}">
+            <td th:text="${#temporals.format(s.date, 'yyyy-MM-dd (E)')}">2026-11-10</td>
+            <td th:text="${#temporals.format(s.startTime, 'HH:mm') + '–' + #temporals.format(s.endTime, 'HH:mm')}">19:30–21:00</td>
+            <td th:text="${s.course.displayName}">S2 AI 辅助编码</td>
+            <td th:text="${s.instructor.name}">田中 诚</td>
+            <td th:text="${s.mode.label}">线上</td>
+            <td th:text="${s.location}">Zoom</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(upcoming)}"><td colspan="6" class="empty">没有近期课次</td></tr>
+        </tbody>
+    </table>
+
+    <h2>功能实装状况</h2>
+    <table>
+        <thead><tr><th>编号</th><th>功能</th><th>状态</th></tr></thead>
+        <tbody>
+        <tr th:each="f : ${features}">
+            <td th:text="${f.no}">F1</td>
+            <td>
+                <a th:if="${f.done and f.path != null}" th:href="@{${f.path}}" th:text="${f.name}">学员管理</a>
+                <span th:unless="${f.done and f.path != null}" th:text="${f.name}">出勤登记</span>
+            </td>
+            <td>
+                <span th:if="${f.done}" class="badge done">已实装</span>
+                <span th:unless="${f.done}" class="badge todo">未实装（学员课题）</span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</section>
+</body>
+</html>

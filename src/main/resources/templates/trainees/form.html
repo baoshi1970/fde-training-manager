@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>学员编辑 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1 th:text="${trainee.id == null} ? '新增学员' : '编辑学员'">新增学员</h1>
+    <form class="form" th:object="${trainee}" method="post"
+          th:action="${trainee.id == null} ? @{/trainees} : @{/trainees/{id}(id=${trainee.id})}">
+        <div class="field">
+            <label for="name">姓名 *</label>
+            <input type="text" th:field="*{name}">
+            <div class="err" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+        </div>
+        <div class="field">
+            <label for="email">邮箱 *</label>
+            <input type="email" th:field="*{email}">
+            <div class="err" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+        </div>
+        <div class="field">
+            <label for="affiliation">所属（公司・部门）</label>
+            <input type="text" th:field="*{affiliation}">
+        </div>
+        <div class="row">
+            <div class="field">
+                <label for="status">状态 *</label>
+                <select th:field="*{status}">
+                    <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.label}">在籍</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="joinedOn">入学日期 *</label>
+                <input type="date" th:field="*{joinedOn}">
+                <div class="err" th:if="${#fields.hasErrors('joinedOn')}" th:errors="*{joinedOn}"></div>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn">保存</button>
+            <a class="btn secondary" th:href="@{/trainees}">返回</a>
+        </div>
+    </form>
+</section>
+</body>
+</html>

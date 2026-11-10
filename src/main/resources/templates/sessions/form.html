@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>课次编辑 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1 th:text="${courseSession.id == null} ? '新增课次' : '编辑课次'">新增课次</h1>
+    <form class="form" th:object="${courseSession}" method="post"
+          th:action="${courseSession.id == null} ? @{/sessions} : @{/sessions/{id}(id=${courseSession.id})}">
+        <div class="row">
+            <div class="field">
+                <label for="course">课程 *</label>
+                <select id="course" name="course.id">
+                    <option th:each="c : ${courses}" th:value="${c.id}" th:text="${c.displayName}"
+                            th:selected="${courseSession.course != null and c.id == courseSession.course.id}">S2</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="instructor">讲师 *</label>
+                <select id="instructor" name="instructor.id">
+                    <option th:each="i : ${instructors}" th:value="${i.id}" th:text="${i.name}"
+                            th:selected="${courseSession.instructor != null and i.id == courseSession.instructor.id}">田中 诚</option>
+                </select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label for="date">日期 *</label>
+                <input type="date" th:field="*{date}">
+                <div class="err" th:if="${#fields.hasErrors('date')}" th:errors="*{date}"></div>
+            </div>
+            <div class="field">
+                <label for="startTime">开始 *</label>
+                <input type="time" th:field="*{startTime}">
+                <div class="err" th:if="${#fields.hasErrors('startTime')}" th:errors="*{startTime}"></div>
+            </div>
+            <div class="field">
+                <label for="endTime">结束 *</label>
+                <input type="time" th:field="*{endTime}">
+                <div class="err" th:if="${#fields.hasErrors('endTime')}" th:errors="*{endTime}"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="field">
+                <label for="mode">形式 *</label>
+                <select th:field="*{mode}">
+                    <option th:each="m : ${modes}" th:value="${m}" th:text="${m.label}">线上</option>
+                </select>
+            </div>
+            <div class="field" style="flex:2">
+                <label for="location">地点（会议链接或教室）</label>
+                <input type="text" th:field="*{location}">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn">保存</button>
+            <a class="btn secondary" th:href="@{/sessions}">返回</a>
+        </div>
+    </form>
+</section>
+</body>
+</html>

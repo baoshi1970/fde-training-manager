@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>错误 | 培训管理系统</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="login-wrap">
+    <div class="login" style="width:480px">
+        <h1 th:text="${status == 404} ? '页面或数据不存在' : '系统错误'">系统错误</h1>
+        <p class="flash ng">
+            状态码：<span th:text="${status}">500</span>
+            <span th:if="${status == 404 and message != null}" th:text="'（' + ${message} + '）'"></span>
+        </p>
+        <p>请返回主页重新操作。如果反复出现，请把发生时的操作步骤报告给管理员。</p>
+        <a class="btn" th:href="@{/}">返回主页</a>
+    </div>
+</div>
+</body>
+</html>
