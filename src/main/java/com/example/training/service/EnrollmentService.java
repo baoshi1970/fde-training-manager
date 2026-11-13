@@ -36,7 +36,7 @@ public class EnrollmentService {
     }
 
     /**
-     * 报名。只有「在籍」的学员可以报名。
+     * 报名。只有「在籍」的学员可以报名；同一学员不能重复报名同一课程。
      */
     @Transactional
     public Enrollment enroll(Long traineeId, Long courseId, LocalDate today) {
@@ -44,6 +44,10 @@ public class EnrollmentService {
         Course course = courseService.get(courseId);
         if (trainee.getStatus() != TraineeStatus.ACTIVE) {
             throw new BusinessException("只有「在籍」的学员可以报名（" + trainee.getName() + "：" + trainee.getStatus().getLabel() + "）");
+        }
+        if (enrollmentRepository.existsByTraineeIdAndCourseId(traineeId, courseId)) {
+            throw new BusinessException(trainee.getName() + " 已经报名了「" + course.getName()
+                    + "」，不能重复报名。如需重新报名，请先取消原来的报名");
         }
         return enrollmentRepository.save(new Enrollment(trainee, course, today));
     }
