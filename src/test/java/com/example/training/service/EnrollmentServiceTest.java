@@ -49,6 +49,36 @@ class EnrollmentServiceTest {
     }
 
     @Test
+    void 已报名的学员不能重复报名同一课程() {
+        Trainee t = new Trainee("山田 太郎", "a@example.com", "A 社", TraineeStatus.ACTIVE, today);
+        when(traineeService.get(1L)).thenReturn(t);
+        when(courseService.get(2L)).thenReturn(course);
+        when(enrollmentRepository.existsByTraineeIdAndCourseId(1L, 2L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.enroll(1L, 2L, today))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("山田 太郎")
+                .hasMessageContaining("不能重复报名");
+        verify(enrollmentRepository, never()).save(any());
+    }
+
+    @Test
+    void 已报名其他课程的学员可以报名本课程() {
+        Trainee t = new Trainee("山田 太郎", "a@example.com", "A 社", TraineeStatus.ACTIVE, today);
+        when(traineeService.get(1L)).thenReturn(t);
+        when(courseService.get(2L)).thenReturn(course);
+        // 只有（学员 1 × 课程 3）报过名，（学员 1 × 课程 2）没有
+        lenient().when(enrollmentRepository.existsByTraineeIdAndCourseId(1L, 3L)).thenReturn(true);
+        when(enrollmentRepository.existsByTraineeIdAndCourseId(1L, 2L)).thenReturn(false);
+        when(enrollmentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Enrollment e = service.enroll(1L, 2L, today);
+
+        assertThat(e.getCourse()).isSameAs(course);
+        verify(enrollmentRepository).save(any());
+    }
+
+    @Test
     void 休学学员不能报名() {
         Trainee t = new Trainee("鈴木 一郎", "b@example.com", "C 社", TraineeStatus.ON_LEAVE, today);
         when(traineeService.get(1L)).thenReturn(t);
