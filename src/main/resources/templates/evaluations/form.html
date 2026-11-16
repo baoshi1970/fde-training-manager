@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>打分 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1 th:text="'打分：' + ${enrollment.trainee.name} + '（' + ${enrollment.course.displayName} + '）'">打分</h1>
+
+    <p class="empty" th:if="${#lists.isEmpty(criteria)}">这门课程还没有设置评价维度，暂时不能打分。</p>
+
+    <form class="form" method="post" th:unless="${#lists.isEmpty(criteria)}"
+          th:action="@{/evaluations/{id}(id=${enrollment.id})}">
+        <div class="field" th:each="c : ${criteria}">
+            <label th:for="${'score_' + c.id}" th:text="${c.name} + '（权重 ' + ${c.weight} + '）'">三段法（权重 25）</label>
+            <input type="number" min="1" max="5" step="1"
+                   th:id="${'score_' + c.id}" th:name="${'score_' + c.id}" th:value="${values[c.id]}">
+        </div>
+        <div class="field">
+            <div class="hint">得分是 1〜5 的整数。留空表示「未打分」，所有维度打完后才会算出总分。</div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn">保存</button>
+            <a class="btn secondary" th:href="@{/evaluations(courseId=${enrollment.course.id})}">返回</a>
+        </div>
+    </form>
+</section>
+</body>
+</html>
