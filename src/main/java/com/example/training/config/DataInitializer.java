@@ -31,6 +31,7 @@ public class DataInitializer implements CommandLineRunner {
     private final CourseRepository courseRepo;
     private final CourseSessionRepository sessionRepo;
     private final EnrollmentRepository enrollmentRepo;
+    private final AttendanceRepository attendanceRepo;
     private final PasswordEncoder encoder;
     private final Clock clock;
     private final JdbcTemplate jdbc;
@@ -38,6 +39,7 @@ public class DataInitializer implements CommandLineRunner {
     public DataInitializer(AppUserRepository userRepo, TraineeRepository traineeRepo,
                            InstructorRepository instructorRepo, CourseRepository courseRepo,
                            CourseSessionRepository sessionRepo, EnrollmentRepository enrollmentRepo,
+                           AttendanceRepository attendanceRepo,
                            PasswordEncoder encoder, Clock clock, JdbcTemplate jdbc) {
         this.userRepo = userRepo;
         this.traineeRepo = traineeRepo;
@@ -45,6 +47,7 @@ public class DataInitializer implements CommandLineRunner {
         this.courseRepo = courseRepo;
         this.sessionRepo = sessionRepo;
         this.enrollmentRepo = enrollmentRepo;
+        this.attendanceRepo = attendanceRepo;
         this.encoder = encoder;
         this.clock = clock;
         this.jdbc = jdbc;
@@ -65,6 +68,7 @@ public class DataInitializer implements CommandLineRunner {
     @Transactional
     public void resetToSeed() {
         lockIfPostgres();
+        attendanceRepo.deleteAllInBatch();   // 依赖课次和学员，最先删
         enrollmentRepo.deleteAllInBatch();
         sessionRepo.deleteAllInBatch();
         courseRepo.deleteAllInBatch();

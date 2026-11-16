@@ -1,6 +1,7 @@
 package com.example.training.service;
 
 import com.example.training.domain.CourseSession;
+import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.CourseSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,12 +19,15 @@ public class SessionService {
     private final CourseSessionRepository sessionRepository;
     private final CourseService courseService;
     private final InstructorService instructorService;
+    private final AttendanceRepository attendanceRepository;
 
     public SessionService(CourseSessionRepository sessionRepository,
-                          CourseService courseService, InstructorService instructorService) {
+                          CourseService courseService, InstructorService instructorService,
+                          AttendanceRepository attendanceRepository) {
         this.sessionRepository = sessionRepository;
         this.courseService = courseService;
         this.instructorService = instructorService;
+        this.attendanceRepository = attendanceRepository;
     }
 
     /** @param courseId 指定则只列该课程的课次 */
@@ -64,7 +68,12 @@ public class SessionService {
 
     @Transactional
     public void delete(Long id) {
-        sessionRepository.delete(get(id));
+        CourseSession session = get(id);
+        // 出勤是历史记录（F9 要用），不连带删除
+        if (attendanceRepository.existsBySessionId(id)) {
+            throw new BusinessException("该课次已有出勤记录，不能删除。请先在「出勤登记」里把该课次的出勤全部改为「未记录」并保存，再删除。");
+        }
+        sessionRepository.delete(session);
     }
 
     /** 主页用：今天以后的课次，最多 limit 件 */

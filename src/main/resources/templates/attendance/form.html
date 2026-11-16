@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>出勤登记 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1>出勤登记</h1>
+    <p>
+        <strong th:text="${courseSession.course.displayName}">S2 AI 辅助编码</strong>
+        <span th:text="${#temporals.format(courseSession.date, 'yyyy-MM-dd (E)') + ' '
+                + #temporals.format(courseSession.startTime, 'HH:mm') + '–'
+                + #temporals.format(courseSession.endTime, 'HH:mm')}">2026-11-10 19:30–21:00</span>
+        ／ 讲师：<span th:text="${courseSession.instructor.name}">田中 诚</span>
+    </p>
+
+    <form th:action="@{/attendance/sessions/{id}(id=${courseSession.id})}" method="post">
+        <table>
+            <thead><tr><th>学员</th><th>所属</th><th>出勤状态</th></tr></thead>
+            <tbody>
+            <tr th:each="e : ${enrollees}">
+                <td th:text="${e.trainee.name}">山田 太郎</td>
+                <td th:text="${e.trainee.affiliation}">A 社 开发部</td>
+                <td>
+                    <select th:name="|statuses[${e.trainee.id}]|">
+                        <option value="">未记录</option>
+                        <option th:each="st : ${attendanceStatuses}" th:value="${st}" th:text="${st.label}"
+                                th:selected="${form.statuses.get(e.trainee.id) == st}">出席</option>
+                    </select>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(enrollees)}"><td colspan="3" class="empty">该课程还没有报名者</td></tr>
+            </tbody>
+        </table>
+        <div class="form-actions">
+            <button type="submit" class="btn" th:unless="${#lists.isEmpty(enrollees)}">保存</button>
+            <a class="btn secondary" th:href="@{/attendance}">返回</a>
+        </div>
+    </form>
+</section>
+</body>
+</html>
