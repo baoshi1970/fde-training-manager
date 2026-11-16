@@ -5,6 +5,7 @@ import com.example.training.domain.CourseCategory;
 import com.example.training.domain.CourseSession;
 import com.example.training.domain.Instructor;
 import com.example.training.domain.SessionMode;
+import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.CourseSessionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +29,8 @@ class SessionServiceTest {
     CourseService courseService;
     @Mock
     InstructorService instructorService;
+    @Mock
+    AttendanceRepository attendanceRepository;
     @InjectMocks
     SessionService service;
 
@@ -48,6 +51,26 @@ class SessionServiceTest {
     void 结束时间等于开始时间也报错() {
         assertThatThrownBy(() -> service.create(session(LocalTime.of(19, 30), LocalTime.of(19, 30))))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void 删除课次时_连同出勤一起删() {
+        CourseSession s = session(LocalTime.of(19, 30), LocalTime.of(21, 0));
+        when(sessionRepository.findById(5L)).thenReturn(java.util.Optional.of(s));
+
+        service.delete(5L);
+
+        var order = inOrder(attendanceRepository, sessionRepository);
+        order.verify(attendanceRepository).deleteBySessionId(5L);
+        order.verify(sessionRepository).delete(s);
+    }
+
+    @Test
+    void 删除不存在的课次_抛出NotFound_且不删出勤() {
+        when(sessionRepository.findById(5L)).thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(5L)).isInstanceOf(NotFoundException.class);
+        verify(attendanceRepository, never()).deleteBySessionId(any());
     }
 
     @Test

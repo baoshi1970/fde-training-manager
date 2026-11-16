@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>出勤登记 | 培训管理系统</title></head>
+<body>
+<section>
+    <div class="page-head">
+        <h1>出勤登记</h1>
+        <a class="btn secondary" th:href="@{/attendance}">返回课次一览</a>
+    </div>
+
+    <p th:text="${courseSession.course.displayName} + '　'
+        + ${#temporals.format(courseSession.date, 'yyyy-MM-dd (E)')} + ' '
+        + ${#temporals.format(courseSession.startTime, 'HH:mm')} + '–'
+        + ${#temporals.format(courseSession.endTime, 'HH:mm')} + '　讲师：' + ${courseSession.instructor.name}">
+        S2 AI 辅助编码　2026-11-10</p>
+
+    <div class="stats" th:unless="${#lists.isEmpty(enrollments)}">
+        <div class="stat" th:each="o : ${options}">
+            <div class="num" th:text="${counts.get(o)}">0</div><div class="label" th:text="${o.label}">出席</div>
+        </div>
+        <div class="stat">
+            <div class="num" th:text="${#lists.size(enrollments) - #maps.size(statuses)}">0</div>
+            <div class="label">未记录</div>
+        </div>
+    </div>
+
+    <form th:action="@{/attendance/{id}(id=${courseSession.id})}" method="post">
+        <table>
+            <thead><tr><th>#</th><th>学员</th><th>所属</th><th>出勤</th></tr></thead>
+            <tbody>
+            <tr th:each="e, st : ${enrollments}">
+                <td th:text="${st.count}">1</td>
+                <td th:text="${e.trainee.name}">山田 太郎</td>
+                <td th:text="${e.trainee.affiliation}">A 社</td>
+                <td>
+                    <select th:name="${'status_' + e.trainee.id}">
+                        <option value="">未记录</option>
+                        <option th:each="o : ${options}" th:value="${o.name()}" th:text="${o.label}"
+                                th:selected="${statuses.get(e.trainee.id) == o}">出席</option>
+                    </select>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(enrollments)}"><td colspan="4" class="empty">这门课程还没有人报名</td></tr>
+            </tbody>
+        </table>
+        <p th:unless="${#lists.isEmpty(enrollments)}">
+            <button type="submit" class="btn">保存</button>
+            <button type="button" class="btn secondary"
+                    onclick="document.querySelectorAll('select[name^=status_]').forEach(function (s) { s.value = 'PRESENT'; });">
+                全部设为出席（保存后生效）
+            </button>
+        </p>
+    </form>
+</section>
+</body>
+</html>

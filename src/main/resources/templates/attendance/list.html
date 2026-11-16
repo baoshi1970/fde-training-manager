@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>出勤登记 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1>出勤登记</h1>
+    <p style="color:var(--muted)">选择一个课次，登记该课程报名者的出勤。</p>
+
+    <table>
+        <thead><tr><th>日期</th><th>时段</th><th>课程</th><th>讲师</th><th>出勤登记情况</th><th>操作</th></tr></thead>
+        <tbody>
+        <tr th:each="o : ${overviews}">
+            <td th:text="${#temporals.format(o.session.date, 'yyyy-MM-dd (E)')}">2026-11-10</td>
+            <td th:text="${#temporals.format(o.session.startTime, 'HH:mm') + '–' + #temporals.format(o.session.endTime, 'HH:mm')}">19:30–21:00</td>
+            <td th:text="${o.session.course.displayName}">S2 AI 辅助编码</td>
+            <td th:text="${o.session.instructor.name}">田中 诚</td>
+            <td>
+                <span th:if="${o.enrolled == 0}" style="color:var(--muted)">无报名者</span>
+                <th:block th:if="${o.enrolled > 0}">
+                    <span th:text="${o.recorded + ' / ' + o.enrolled + ' 人已记录'}">3 / 6 人已记录</span>
+                    <span th:if="${o.recorded == 0}" class="badge todo">未登记</span>
+                    <span th:if="${o.recorded > 0 and o.recorded < o.enrolled}" class="badge todo">登记中</span>
+                    <span th:if="${o.recorded >= o.enrolled}" class="badge done">已登记</span>
+                </th:block>
+            </td>
+            <td class="actions">
+                <a class="btn small" th:href="@{/attendance/{id}(id=${o.session.id})}">登记出勤</a>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(overviews)}"><td colspan="6" class="empty">没有课次</td></tr>
+        </tbody>
+    </table>
+</section>
+</body>
+</html>

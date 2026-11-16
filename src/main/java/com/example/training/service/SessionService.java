@@ -1,6 +1,7 @@
 package com.example.training.service;
 
 import com.example.training.domain.CourseSession;
+import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.CourseSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,12 +19,15 @@ public class SessionService {
     private final CourseSessionRepository sessionRepository;
     private final CourseService courseService;
     private final InstructorService instructorService;
+    private final AttendanceRepository attendanceRepository;
 
     public SessionService(CourseSessionRepository sessionRepository,
-                          CourseService courseService, InstructorService instructorService) {
+                          CourseService courseService, InstructorService instructorService,
+                          AttendanceRepository attendanceRepository) {
         this.sessionRepository = sessionRepository;
         this.courseService = courseService;
         this.instructorService = instructorService;
+        this.attendanceRepository = attendanceRepository;
     }
 
     /** @param courseId 指定则只列该课程的课次 */
@@ -64,7 +68,10 @@ public class SessionService {
 
     @Transactional
     public void delete(Long id) {
-        sessionRepository.delete(get(id));
+        CourseSession session = get(id);
+        // 出勤记录依附于课次：连同出勤一起删（否则外键约束会报 500）
+        attendanceRepository.deleteBySessionId(id);
+        sessionRepository.delete(session);
     }
 
     /** 主页用：今天以后的课次，最多 limit 件 */
