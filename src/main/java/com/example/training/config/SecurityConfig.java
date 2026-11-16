@@ -36,8 +36,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(antMatcher("/login"), antMatcher("/css/**")).permitAll()
                 .requestMatchers(antMatcher("/admin/**")).hasRole("ADMIN")
-                // F8：打分（/evaluations/{报名id}/edit・POST /evaluations/{报名id}）只有讲师可以；一览谁都可以看
-                .requestMatchers(antMatcher("/evaluations/*/**")).hasRole("INSTRUCTOR")
+                // F8：打分（/evaluations/{报名id}/edit・POST /evaluations/{报名id}）管理员和讲师都可以（#16）
+                // 现在只有这两种角色，但仍明确写出，将来新增角色时不会被默认放行
+                .requestMatchers(antMatcher("/evaluations/*/**")).hasAnyRole("ADMIN", "INSTRUCTOR")
                 .anyRequest().authenticated())
             .formLogin(form -> form
                 .loginPage("/login")

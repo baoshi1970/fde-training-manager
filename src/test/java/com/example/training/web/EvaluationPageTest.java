@@ -67,27 +67,10 @@ class EvaluationPageTest {
         assertThat(criteriaOf(course("S3"))).isEmpty();
     }
 
-    // ---------- 打分（只有 INSTRUCTOR） ----------
+    // ---------- 打分（ADMIN・INSTRUCTOR 都可以：#16） ----------
 
-    @Test
-    @WithMockUser(username = "admin", roles = "ADMIN")
-    void W1_ADMIN打开打分画面是403() throws Exception {
-        Enrollment e = firstEnrollmentOf(course("S2"));
-        mvc.perform(get("/evaluations/{id}/edit", e.getId()))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(username = "admin", roles = "ADMIN")
-    void W1_ADMIN提交打分是403() throws Exception {
-        Enrollment e = firstEnrollmentOf(course("S2"));
-        mvc.perform(post("/evaluations/{id}", e.getId()).with(csrf()))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(username = "teacher", roles = "INSTRUCTOR")
-    void W2_INSTRUCTOR按Issue例子打分_一览显示79点0和B() throws Exception {
+    /** 按 Issue #8 的例子（4,3,5,4,3,5）给 S2 的第 1 个报名者打分，然后检查一览 */
+    private void scoreIssueExampleAndCheckList() throws Exception {
         Course s2 = course("S2");
         Enrollment e = firstEnrollmentOf(s2);
         List<EvaluationCriterion> c = criteriaOf(s2);
@@ -103,6 +86,50 @@ class EvaluationPageTest {
         mvc.perform(get("/evaluations").param("courseId", s2.getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("79.0（B）")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void W1_ADMIN在一览看到打分按钮_能打开打分画面() throws Exception {
+        Course s2 = course("S2");
+        Enrollment e = firstEnrollmentOf(s2);
+        mvc.perform(get("/evaluations").param("courseId", s2.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/evaluations/" + e.getId() + "/edit")))
+                .andExpect(content().string(not(containsString("打分只有讲师可以进行"))));
+        mvc.perform(get("/evaluations/{id}/edit", e.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("三段法")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void W1_ADMIN按Issue例子打分_一览显示79点0和B() throws Exception {
+        scoreIssueExampleAndCheckList();
+    }
+
+    @Test
+    void 未登录访问打分画面_跳转到登录页() throws Exception {
+        Enrollment e = firstEnrollmentOf(course("S2"));
+        mvc.perform(get("/evaluations/{id}/edit", e.getId()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("**/login"));
+    }
+
+    @Test
+    @WithMockUser(username = "teacher", roles = "INSTRUCTOR")
+    void W2_INSTRUCTOR按Issue例子打分_一览显示79点0和B() throws Exception {
+        scoreIssueExampleAndCheckList();
+    }
+
+    @Test
+    @WithMockUser(username = "teacher", roles = "INSTRUCTOR")
+    void W2_INSTRUCTOR在一览看到打分按钮() throws Exception {
+        Course s2 = course("S2");
+        Enrollment e = firstEnrollmentOf(s2);
+        mvc.perform(get("/evaluations").param("courseId", s2.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/evaluations/" + e.getId() + "/edit")));
     }
 
     @Test

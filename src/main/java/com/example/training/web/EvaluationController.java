@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * F8 加权评分：选课程 → 看评分一览 → 给报名者打分。
- * 打分（/{报名id}/edit・POST /{报名id}）只有讲师可以（SecurityConfig 限制）
+ * 打分（/{报名id}/edit・POST /{报名id}）管理员和讲师都可以（SecurityConfig 限制，#16）
  */
 @Controller
 @RequestMapping("/evaluations")

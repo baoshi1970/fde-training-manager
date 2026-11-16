@@ -39,7 +39,7 @@
                         <small th:text="'权重 ' + ${c.weight}">权重 25</small>
                     </th>
                     <th>总分（评级）</th>
-                    <th sec:authorize="hasRole('INSTRUCTOR')">操作</th>
+                    <th sec:authorize="hasAnyRole('ADMIN', 'INSTRUCTOR')">操作</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -50,7 +50,7 @@
                     <td th:if="${row.result.complete}"
                         th:text="${row.result.total + '（' + row.result.grade + '）'}"><strong>79.0（B）</strong></td>
                     <td th:unless="${row.result.complete}" style="color:var(--muted)">未完成</td>
-                    <td class="actions" sec:authorize="hasRole('INSTRUCTOR')">
+                    <td class="actions" sec:authorize="hasAnyRole('ADMIN', 'INSTRUCTOR')">
                         <a class="btn small secondary"
                            th:href="@{/evaluations/{id}/edit(id=${row.enrollment.id})}">打分</a>
                     </td>
@@ -61,7 +61,6 @@
                 </tbody>
             </table>
             <p sec:authorize="hasRole('ADMIN')" style="color:var(--muted)">
-                打分只有讲师可以进行。
                 <a th:href="@{/admin/courses/{id}/criteria(id=${course.id})}">评价维度设置</a>
             </p>
         </th:block>
