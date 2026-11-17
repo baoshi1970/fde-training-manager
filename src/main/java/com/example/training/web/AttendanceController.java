@@ -8,6 +8,7 @@ import com.example.training.service.CourseService;
 import com.example.training.service.SessionService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -59,7 +60,14 @@ public class AttendanceController {
 
     @PostMapping("/sessions/{id}")
     public String save(@PathVariable Long id, @ModelAttribute("form") AttendanceForm form,
-                       Model model, RedirectAttributes ra) {
+                       BindingResult binding, Model model, RedirectAttributes ra) {
+        // 绕过画面直接提交了非法的状态值或学员 id：表单绑定失败，一条都不保存，回显已保存的状态
+        if (binding.hasErrors()) {
+            model.addAttribute("error", "提交的出勤状态不正确，请刷新页面后重新选择。");
+            form.setStatuses(new HashMap<>(service.statusesOf(id)));
+            fillModel(id, form, model);
+            return "attendance/form";
+        }
         try {
             service.save(id, form.getStatuses());
         } catch (BusinessException e) {

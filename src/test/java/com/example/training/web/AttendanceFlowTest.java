@@ -121,6 +121,27 @@ class AttendanceFlowTest {
     }
 
     @Test
+    void 提交非法状态值_显示业务错误而不是400_什么都不保存() throws Exception {
+        // 绕过画面的下拉框直接 POST（#17 review 第 4 点）
+        mvc.perform(post(formUrl()).with(csrf())
+                        .param("statuses[" + kenta.getId() + "]", "PRESENT")
+                        .param("statuses[" + ichiro.getId() + "]", "XXX"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("提交的出勤状态不正确")));
+
+        assertThat(attendanceRepository.findBySessionId(s2Session.getId())).isEmpty();
+    }
+
+    @Test
+    void 提交非法学员id_显示业务错误而不是400() throws Exception {
+        mvc.perform(post(formUrl()).with(csrf()).param("statuses[abc]", "PRESENT"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("提交的出勤状态不正确")));
+
+        assertThat(attendanceRepository.findBySessionId(s2Session.getId())).isEmpty();
+    }
+
+    @Test
     void 删除有出勤记录的课次_显示业务错误而不是500() throws Exception {
         attendanceRepository.save(new Attendance(s2Session, kenta, AttendanceStatus.PRESENT));
 
