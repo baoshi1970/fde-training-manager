@@ -79,6 +79,14 @@ class AttendanceFlowTest {
     }
 
     @Test
+    void 课次排期一览每行有出勤入口() throws Exception {
+        // issue：「从课次一览进入某个课次」（讲师建议吸收 #18 的设计）
+        mvc.perform(get("/sessions"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("href=\"" + formUrl() + "\"")));
+    }
+
+    @Test
     void 登记表单只列出该课程的报名者() throws Exception {
         mvc.perform(get(formUrl()))
                 .andExpect(status().isOk())
