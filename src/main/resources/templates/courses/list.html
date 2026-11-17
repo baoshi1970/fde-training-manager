@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
 <head><title>课程管理 | 培训管理系统</title></head>
 <body>
@@ -20,6 +20,9 @@
             <td>
                 <a th:href="@{/sessions(courseId=${c.id})}">课次</a> ／
                 <a th:href="@{/enrollments(courseId=${c.id})}">报名者</a>
+                <th:block sec:authorize="hasRole('ADMIN')"> ／
+                    <a th:href="@{/admin/courses/{id}/criteria(id=${c.id})}">评价维度</a>
+                </th:block>
             </td>
             <td class="actions">
                 <a class="btn small secondary" th:href="@{/courses/{id}/edit(id=${c.id})}">编辑</a>
