@@ -145,6 +145,14 @@ class CsvParserTest {
     }
 
     @Test
+    void 跨行记录中闭合引号后跟其他字符_报错行号是记录的开始行() {
+        // 记录从第 2 行开始，出错的 x 在第 3 行
+        assertThatThrownBy(() -> parse(HEADER + "\n山田 太郎,a@example.com,\"A 社\n开发部\"x,2026-11-01\n"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageStartingWith("第 2 行：引号后面不能直接跟其他字符");
+    }
+
+    @Test
     void 引号外字段中间的双引号_按普通字符处理() {
         List<CsvRecord> records = parse(HEADER + "\n山田 太郎,a@example.com,A\"社,2026-11-01\n");
 

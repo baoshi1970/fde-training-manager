@@ -91,25 +91,27 @@ public final class CsvParser {
             // \r\n 当作一个换行
             boolean crlf = c == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n';
 
+            // 引号外（包括闭合引号之后）的逗号・换行：结束当前字段，换行时再结束当前记录
+            if (state != State.QUOTED && (c == ',' || newline)) {
+                fields.add(field.toString());
+                field.setLength(0);
+                if (newline) {
+                    addRecord(records, recordStartLine, fields);
+                    fields = new ArrayList<>();
+                    if (crlf) {
+                        i++;
+                    }
+                    line++;
+                    recordStartLine = line;
+                }
+                state = State.FIELD_START;
+                continue;
+            }
+
             switch (state) {
                 case FIELD_START, UNQUOTED -> {
                     if (c == '"' && state == State.FIELD_START) {
                         state = State.QUOTED;
-                    } else if (c == ',') {
-                        fields.add(field.toString());
-                        field.setLength(0);
-                        state = State.FIELD_START;
-                    } else if (newline) {
-                        fields.add(field.toString());
-                        field.setLength(0);
-                        addRecord(records, recordStartLine, fields);
-                        fields = new ArrayList<>();
-                        state = State.FIELD_START;
-                        if (crlf) {
-                            i++;
-                        }
-                        line++;
-                        recordStartLine = line;
                     } else {
                         // 引号外字段中间出现的 " 按普通字符处理（Excel 不会生成这种写法）
                         field.append(c);
@@ -132,22 +134,8 @@ public final class CsvParser {
                         // "" → 一个 "
                         field.append('"');
                         state = State.QUOTED;
-                    } else if (c == ',') {
-                        fields.add(field.toString());
-                        field.setLength(0);
-                        state = State.FIELD_START;
-                    } else if (newline) {
-                        fields.add(field.toString());
-                        field.setLength(0);
-                        addRecord(records, recordStartLine, fields);
-                        fields = new ArrayList<>();
-                        state = State.FIELD_START;
-                        if (crlf) {
-                            i++;
-                        }
-                        line++;
-                        recordStartLine = line;
                     } else {
+                        // 闭合引号后的逗号・换行已在上面处理，到这里的都是不允许的字符
                         throw new BusinessException("第 " + recordStartLine + " 行：引号后面不能直接跟其他字符（"
                                 + "字段内容里的 \" 要写成 \"\"）");
                     }
