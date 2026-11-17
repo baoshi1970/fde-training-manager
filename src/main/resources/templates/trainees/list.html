@@ -6,7 +6,10 @@
 <section>
     <div class="page-head">
         <h1>学员管理</h1>
-        <a class="btn" th:href="@{/trainees/new}">＋ 新增学员</a>
+        <div>
+            <a class="btn secondary" th:href="@{/trainees/import}">CSV 导入</a>
+            <a class="btn" th:href="@{/trainees/new}">＋ 新增学员</a>
+        </div>
     </div>
 
     <form class="search" th:action="@{/trainees}" method="get">
