@@ -167,6 +167,66 @@ class EvaluationServiceTest {
         verify(criterionRepository, never()).save(any());
     }
 
+    // ---------- S22 维度名称的长度（#21）：DB 列是 length = 50 ----------
+
+    @Test
+    void S22_1_名称正好50个半角字符可以保存_边界OK() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        service.saveCriteria(1L, List.of(input(null, "a".repeat(50), 100)));
+
+        verify(criterionRepository).save(any());
+    }
+
+    @Test
+    void S22_2_名称51个半角字符不能保存_边界NG() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        assertThatThrownBy(() -> service.saveCriteria(1L, List.of(input(null, "a".repeat(51), 100))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("维度名称不能超过 50 个字符（当前：51 字）");
+        verify(criterionRepository, never()).save(any());
+    }
+
+    @Test
+    void S22_3_名称50个中文字可以保存() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        service.saveCriteria(1L, List.of(input(null, "评".repeat(50), 100)));
+
+        verify(criterionRepository).save(any());
+    }
+
+    @Test
+    void S22_4_名称51个中文字不能保存() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        assertThatThrownBy(() -> service.saveCriteria(1L, List.of(input(null, "评".repeat(51), 100))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("（当前：51 字）");
+        verify(criterionRepository, never()).save(any());
+    }
+
+    @Test
+    void S22_5_前后空白不计入字数() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        // 保存时去掉前后空白，所以按 50 字计算
+        service.saveCriteria(1L, List.of(input(null, "  " + "a".repeat(50) + "  ", 100)));
+
+        verify(criterionRepository).save(any());
+    }
+
+    @Test
+    void S22_6_扩展汉字按1个字计算() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        // 「𠮷」在 Java 里是 2 个 char，但 DB 按 1 个字计算 → 50 个可以保存
+        service.saveCriteria(1L, List.of(input(null, "𠮷".repeat(50), 100)));
+
+        verify(criterionRepository).save(any());
+    }
+
     @Test
     void S8_课程不存在() {
         when(courseService.get(99L)).thenThrow(new NotFoundException("课程", 99L));

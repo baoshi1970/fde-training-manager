@@ -22,6 +22,8 @@ public class EvaluationService {
     private static final int TOTAL_WEIGHT = 100;
     private static final int MIN_SCORE = 1;
     private static final int MAX_SCORE = 5;
+    /** 维度名称的最大字数（EvaluationCriterion.name 的 length = 50） */
+    private static final int MAX_NAME_LENGTH = 50;
 
     private final EvaluationCriterionRepository criterionRepository;
     private final CriterionScoreRepository scoreRepository;
@@ -52,7 +54,7 @@ public class EvaluationService {
     /**
      * 保存课程的评价维度（整张表一起保存）。
      * <ul>
-     *   <li>至少 1 个维度；名称不能为空、不能重复；权重是 1 以上的整数，合计 100</li>
+     *   <li>至少 1 个维度；名称不能为空、不超过 50 个字符、不能重复；权重是 1 以上的整数，合计 100</li>
      *   <li>已有得分时：不能增加・删除维度，不能修改权重，只能修改名称</li>
      *   <li>画面上去掉的已有维度会被删除（只在没有得分时可能发生）</li>
      * </ul>
@@ -66,6 +68,11 @@ public class EvaluationService {
         for (CriterionInput in : inputs) {
             if (in.name() == null || in.name().isBlank()) {
                 throw new BusinessException("维度名称不能为空");
+            }
+            // 和 DB 的 varchar(50) 一致，按字符数（code point）计算，不按 char 数・字节数
+            int length = in.name().trim().codePointCount(0, in.name().trim().length());
+            if (length > MAX_NAME_LENGTH) {
+                throw new BusinessException("维度名称不能超过 " + MAX_NAME_LENGTH + " 个字符（当前：" + length + " 字）");
             }
             if (in.weight() == null || in.weight() < 1) {
                 throw new BusinessException("权重必须是 1 以上的整数（维度：" + in.name().trim() + "）");

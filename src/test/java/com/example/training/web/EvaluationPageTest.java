@@ -230,4 +230,17 @@ class EvaluationPageTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("权重必须是整数")));
     }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void ADMIN保存维度_名称超过50字时显示错误_不报500() throws Exception {
+        // #21：绕过画面的 maxlength 直接 POST
+        Course s3 = course("S3");
+        mvc.perform(post("/admin/courses/{id}/criteria", s3.getId()).with(csrf())
+                        .param("rows[0].name", "评".repeat(51)).param("rows[0].weight", "100"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("维度名称不能超过 50 个字符（当前：51 字）")));
+
+        assertThat(criteriaOf(s3)).isEmpty();
+    }
 }
