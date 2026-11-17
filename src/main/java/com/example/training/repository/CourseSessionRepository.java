@@ -20,4 +20,7 @@ public interface CourseSessionRepository extends JpaRepository<CourseSession, Lo
     boolean existsByCourseId(Long courseId);
 
     boolean existsByInstructorId(Long instructorId);
+
+    /** 指定讲师在指定日期的课次（#7 排课冲突检查用） */
+    List<CourseSession> findByInstructorIdAndDate(Long instructorId, LocalDate date);
 }
