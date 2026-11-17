@@ -3,10 +3,12 @@ package com.example.training.web;
 import com.example.training.domain.Attendance;
 import com.example.training.domain.AttendanceStatus;
 import com.example.training.domain.CourseSession;
+import com.example.training.domain.Enrollment;
 import com.example.training.domain.Trainee;
 import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.CourseRepository;
 import com.example.training.repository.CourseSessionRepository;
+import com.example.training.repository.EnrollmentRepository;
 import com.example.training.repository.TraineeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,8 @@ class AttendanceFlowTest {
     TraineeRepository traineeRepository;
     @Autowired
     AttendanceRepository attendanceRepository;
+    @Autowired
+    EnrollmentRepository enrollmentRepository;
 
     CourseSession s2Session;
     Trainee kenta;    // S2 报名者
@@ -158,6 +162,35 @@ class AttendanceFlowTest {
                 .andExpect(flash().attribute("error", containsString("出勤记录")));
 
         assertThat(sessionRepository.existsById(s2Session.getId())).isTrue();
+    }
+
+    @Test
+    void 取消报名后_表单仍显示该学员_改为未记录后课次可以删除() throws Exception {
+        // #17 review 第 2 点：取消报名后出勤记录看不到，课次永远删不掉
+        String field = "statuses[" + kenta.getId() + "]";
+        mvc.perform(post(formUrl()).with(csrf()).param(field, "PRESENT"))
+                .andExpect(redirectedUrl(formUrl()));
+        Long courseId = s2Session.getCourse().getId();
+        Enrollment enrollment = enrollmentRepository.findByCourseIdOrderByIdAsc(courseId).stream()
+                .filter(e -> e.getTrainee().getId().equals(kenta.getId())).findFirst().orElseThrow();
+        mvc.perform(post("/enrollments/" + enrollment.getId() + "/cancel").with(csrf())
+                        .param("courseId", courseId.toString()))
+                .andExpect(redirectedUrl("/enrollments?courseId=" + courseId));
+
+        // 表单里仍能看到（标明已取消报名），没报名也没出勤的学员仍然不出现
+        mvc.perform(get(formUrl()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("高橋 健太")))
+                .andExpect(content().string(containsString("已取消报名")))
+                .andExpect(content().string(not(containsString("鈴木 一郎"))));
+
+        // 改为未记录 → 出勤记录删除 → 课次可以删除
+        mvc.perform(post(formUrl()).with(csrf()).param(field, ""))
+                .andExpect(redirectedUrl(formUrl()));
+        assertThat(attendanceRepository.findBySessionId(s2Session.getId())).isEmpty();
+        mvc.perform(post("/sessions/" + s2Session.getId() + "/delete").with(csrf()))
+                .andExpect(redirectedUrl("/sessions"));
+        assertThat(sessionRepository.existsById(s2Session.getId())).isFalse();
     }
 
     @Test

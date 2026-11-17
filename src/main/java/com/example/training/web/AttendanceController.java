@@ -82,6 +82,7 @@ public class AttendanceController {
     private void fillModel(Long id, AttendanceForm form, Model model) {
         model.addAttribute("courseSession", sessionService.get(id));
         model.addAttribute("enrollees", service.enrollees(id));
+        model.addAttribute("cancelled", service.cancelledWithAttendance(id));
         model.addAttribute("form", form);
     }
 }
