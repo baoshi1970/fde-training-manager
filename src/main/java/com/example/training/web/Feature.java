@@ -18,6 +18,6 @@ public record Feature(String no, String name, String path, boolean done, boolean
             new Feature("F7", "排课冲突检查", null, true, false),    // 课次排期画面内的校验，不单独占菜单
             new Feature("F8", "加权评分", "/evaluations", true, true),
             new Feature("F9", "学员进度看板", null, false, true),
-            new Feature("F10", "CSV 导入学员", null, false, true)
+            new Feature("F10", "CSV 导入学员", "/trainees/import", true, true)
     );
 }

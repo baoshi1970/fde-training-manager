@@ -66,8 +66,8 @@ class TraineeImportPageTest {
     void 一览画面有CSV导入按钮() throws Exception {
         mvc.perform(get("/trainees"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("href=\"/trainees/import\"")))
-                .andExpect(content().string(containsString("CSV 导入")));
+                // 主菜单里也有指向 /trainees/import 的「CSV 导入学员」，所以用按钮自己的标签和文字来确认
+                .andExpect(content().string(containsString("<a class=\"btn secondary\" href=\"/trainees/import\">CSV 导入</a>")));
     }
 
     @Test
