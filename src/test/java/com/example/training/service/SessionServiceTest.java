@@ -6,6 +6,7 @@ import com.example.training.domain.CourseSession;
 import com.example.training.domain.Instructor;
 import com.example.training.domain.SessionMode;
 import com.example.training.repository.CourseSessionRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,8 +67,11 @@ class SessionServiceTest {
      * #7 排课冲突检查。
      * 前提：已有课次 id=1，讲师 A，2026-11-10 10:00–12:00，课程「AI 辅助编码」。
      */
+    // 类名用英文：@Nested 会生成 SessionServiceTest$类名.class，
+    // 中文类名在日文 Windows（MS932）上 clean 后第一次编译会失败。显示名用 @DisplayName
     @Nested
-    class 排课冲突 {
+    @DisplayName("排课冲突")
+    class ConflictCheck {
 
         static final LocalDate DAY = LocalDate.of(2026, 11, 10);
         static final Long A_ID = 10L;
