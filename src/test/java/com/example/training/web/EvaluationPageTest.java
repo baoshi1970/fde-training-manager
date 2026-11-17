@@ -240,8 +240,39 @@ class EvaluationPageTest {
         mvc.perform(post("/admin/courses/{id}/criteria", s3.getId()).with(csrf())
                         .param("rows[0].name", "评".repeat(51)).param("rows[0].weight", "100"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("维度名称不能超过 50 个字符（当前：51 字）")));
+                .andExpect(content().string(containsString("维度名称不能超过 50 个字符（当前：51 字，扩展汉字按 2 个字符计算）")));
 
+        assertThat(criteriaOf(s3)).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void ADMIN保存维度_扩展汉字26个显示错误_25个可以保存() throws Exception {
+        // #23：H2 按 char 数计算（「𠮷」＝2），修正前 50 个「𠮷」会通过 Service 检查后在 DB 报 500
+        Course s3 = course("S3");
+        mvc.perform(post("/admin/courses/{id}/criteria", s3.getId()).with(csrf())
+                        .param("rows[0].name", "𠮷".repeat(26)).param("rows[0].weight", "100"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("（当前：52 字，扩展汉字按 2 个字符计算）")));
+        assertThat(criteriaOf(s3)).isEmpty();
+
+        mvc.perform(post("/admin/courses/{id}/criteria", s3.getId()).with(csrf())
+                        .param("rows[0].name", "𠮷".repeat(25)).param("rows[0].weight", "100"))
+                .andExpect(redirectedUrl("/admin/courses/" + s3.getId() + "/criteria"));
+        criterionRepository.flush();   // 让 INSERT 现在就在 H2 上执行
+        assertThat(criteriaOf(s3)).extracting(EvaluationCriterion::getName).containsExactly("𠮷".repeat(25));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void ADMIN保存维度_末尾全角空格的名称视为重复() throws Exception {
+        // #23：trim() 去不掉全角空格（U+3000）
+        Course s3 = course("S3");
+        mvc.perform(post("/admin/courses/{id}/criteria", s3.getId()).with(csrf())
+                        .param("rows[0].name", "三段法").param("rows[0].weight", "50")
+                        .param("rows[1].name", "三段法　").param("rows[1].weight", "50"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("维度名称重复：三段法。")));
         assertThat(criteriaOf(s3)).isEmpty();
     }
 

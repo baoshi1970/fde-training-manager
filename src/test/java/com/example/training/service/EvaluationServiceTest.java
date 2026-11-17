@@ -184,7 +184,7 @@ class EvaluationServiceTest {
 
         assertThatThrownBy(() -> service.saveCriteria(1L, List.of(input(null, "a".repeat(51), 100))))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage("维度名称不能超过 50 个字符（当前：51 字）");
+                .hasMessage("维度名称不能超过 50 个字符（当前：51 字，扩展汉字按 2 个字符计算）");
         verify(criterionRepository, never()).save(any());
     }
 
@@ -203,7 +203,7 @@ class EvaluationServiceTest {
 
         assertThatThrownBy(() -> service.saveCriteria(1L, List.of(input(null, "评".repeat(51), 100))))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("（当前：51 字）");
+                .hasMessageContaining("（当前：51 字，");
         verify(criterionRepository, never()).save(any());
     }
 
@@ -217,14 +217,57 @@ class EvaluationServiceTest {
         verify(criterionRepository).save(any());
     }
 
+    // #23：H2 按 char 数计算（「𠮷」算 2 个字），所以按 String.length() 检查，两种 DB 都安全
+
     @Test
-    void S22_6_扩展汉字按1个字计算() {
+    void S22_6_扩展汉字25个可以保存_按2个字符计算() {
         when(courseService.get(1L)).thenReturn(s2);
 
-        // 「𠮷」在 Java 里是 2 个 char，但 DB 按 1 个字计算 → 50 个可以保存
-        service.saveCriteria(1L, List.of(input(null, "𠮷".repeat(50), 100)));
+        service.saveCriteria(1L, List.of(input(null, "𠮷".repeat(25), 100)));   // 50 个 char
 
         verify(criterionRepository).save(any());
+    }
+
+    @Test
+    void S22_7_扩展汉字26个不能保存() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        assertThatThrownBy(() -> service.saveCriteria(1L, List.of(input(null, "𠮷".repeat(26), 100))))   // 52 个 char
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("维度名称不能超过 50 个字符（当前：52 字，扩展汉字按 2 个字符计算）");
+        verify(criterionRepository, never()).save(any());
+    }
+
+    // ---------- S25 名称的全角空格（#23）：trim() 去不掉 U+3000 ----------
+
+    @Test
+    void S25_1_末尾全角空格的名称视为重复() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        assertThatThrownBy(() -> service.saveCriteria(1L, List.of(input(null, "三段法", 50), input(null, "三段法　", 50))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("维度名称重复：三段法。");
+        verify(criterionRepository, never()).save(any());
+    }
+
+    @Test
+    void S25_2_前后全角空格保存时去掉() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        service.saveCriteria(1L, List.of(input(null, "　理解　", 100)));
+
+        ArgumentCaptor<EvaluationCriterion> captor = ArgumentCaptor.forClass(EvaluationCriterion.class);
+        verify(criterionRepository).save(captor.capture());
+        assertThat(captor.getValue().getName()).isEqualTo("理解");
+    }
+
+    @Test
+    void S25_3_只有全角空格的名称视为空() {
+        when(courseService.get(1L)).thenReturn(s2);
+
+        assertThatThrownBy(() -> service.saveCriteria(1L, List.of(input(null, "　　", 100))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("维度名称不能为空");
     }
 
     // ---------- S23 维度 id 重复（#22）：不能绕过合计 100 的检查 ----------

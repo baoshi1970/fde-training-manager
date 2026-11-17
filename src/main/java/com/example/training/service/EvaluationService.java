@@ -69,19 +69,21 @@ public class EvaluationService {
             if (in.name() == null || in.name().isBlank()) {
                 throw new BusinessException("维度名称不能为空");
             }
-            // 和 DB 的 varchar(50) 一致，按字符数（code point）计算，不按 char 数・字节数
-            int length = in.name().trim().codePointCount(0, in.name().trim().length());
+            // 按 char 数（String.length()）计算：H2 按 char 数、Postgres 按字符数计算，
+            // 按 char 数检查两种 DB 都不会超长（扩展汉字算 2 个，比 Postgres 严一些；#23）
+            int length = nameOf(in).length();
             if (length > MAX_NAME_LENGTH) {
-                throw new BusinessException("维度名称不能超过 " + MAX_NAME_LENGTH + " 个字符（当前：" + length + " 字）");
+                throw new BusinessException("维度名称不能超过 " + MAX_NAME_LENGTH + " 个字符（当前：" + length
+                        + " 字，扩展汉字按 2 个字符计算）");
             }
             if (in.weight() == null || in.weight() < 1) {
-                throw new BusinessException("权重必须是 1 以上的整数（维度：" + in.name().trim() + "）");
+                throw new BusinessException("权重必须是 1 以上的整数（维度：" + nameOf(in) + "）");
             }
         }
         Set<String> names = new HashSet<>();
         for (CriterionInput in : inputs) {
-            if (!names.add(in.name().trim())) {
-                throw new BusinessException("维度名称重复：" + in.name().trim() + "。同一课程内的维度名称不能相同");
+            if (!names.add(nameOf(in))) {
+                throw new BusinessException("维度名称重复：" + nameOf(in) + "。同一课程内的维度名称不能相同");
             }
         }
 
@@ -113,7 +115,7 @@ public class EvaluationService {
         Set<Long> keptIds = new HashSet<>();
         for (int i = 0; i < inputs.size(); i++) {
             CriterionInput in = inputs.get(i);
-            String name = in.name().trim();
+            String name = nameOf(in);
             if (in.id() == null) {
                 criterionRepository.save(new EvaluationCriterion(course, name, in.weight(), i));
             } else {
@@ -130,6 +132,14 @@ public class EvaluationService {
         if (!removed.isEmpty()) {
             criterionRepository.deleteAll(removed);
         }
+    }
+
+    /**
+     * 检查・重复判定・保存都用这个值。
+     * strip() 也会去掉全角空格（U+3000）；trim() 只去掉半角空白，「三段法　」会被当成另一个名称（#23）
+     */
+    private static String nameOf(CriterionInput in) {
+        return in.name().strip();
     }
 
     /** 有没有增删维度或修改权重（只改名称・顺序则为 false） */
