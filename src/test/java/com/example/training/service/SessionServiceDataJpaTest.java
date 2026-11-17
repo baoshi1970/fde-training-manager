@@ -77,6 +77,7 @@ class SessionServiceDataJpaTest {
     void 完全包含则报错() {
         assertThatThrownBy(() -> service.create(session(instructorA, DAY, t(10, 30), t(11, 0))))
                 .isInstanceOf(BusinessException.class);
+        assertThat(sessionRepository.count()).isEqualTo(1);
     }
 
     @Test
@@ -114,12 +115,18 @@ class SessionServiceDataJpaTest {
 
     @Test
     void 修改时跟其他课次冲突则报错() {
-        CourseSession other = sessionRepository.save(session(instructorA, DAY, t(13, 0), t(15, 0)));
+        sessionRepository.save(session(instructorA, DAY, t(13, 0), t(15, 0)));
         CourseSession edited = session(instructorA, DAY, t(13, 30), t(14, 30));
+        edited.setLocation("会议室 B");
 
         assertThatThrownBy(() -> service.update(existing.getId(), edited))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("13:00–15:00");
-        assertThat(other.getId()).isNotEqualTo(existing.getId());
+
+        // 原课次在 DB 里没有被改掉（时段・地点都是修改前的值）
+        CourseSession reloaded = sessionRepository.findById(existing.getId()).orElseThrow();
+        assertThat(reloaded.getStartTime()).isEqualTo(t(10, 0));
+        assertThat(reloaded.getEndTime()).isEqualTo(t(12, 0));
+        assertThat(reloaded.getLocation()).isEqualTo("Zoom");
     }
 }
