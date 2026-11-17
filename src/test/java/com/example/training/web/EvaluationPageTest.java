@@ -247,6 +247,26 @@ class EvaluationPageTest {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
+    void ADMIN删除设置了评价维度的课程_维度一起删除_不报500() throws Exception {
+        // PR #20 讲师评审：C1 没有课次・报名，设置评价维度后删除 → 修正前是外键错误（500）
+        Course c1 = course("C1");
+        Long c1Id = c1.getId();
+        mvc.perform(post("/admin/courses/{id}/criteria", c1Id).with(csrf())
+                .param("rows[0].name", "理解").param("rows[0].weight", "100"));
+        assertThat(criteriaOf(c1)).hasSize(1);
+
+        mvc.perform(post("/courses/{id}/delete", c1Id).with(csrf()))
+                .andExpect(redirectedUrl("/courses"))
+                .andExpect(flash().attribute("message", "已删除课程"));
+        // 测试和画面处理在同一个事务里：显式 flush，让 DELETE 现在就执行（实际运行时在提交时执行）
+        courseRepository.flush();
+
+        assertThat(courseRepository.findById(c1Id)).isEmpty();
+        assertThat(criterionRepository.findByCourseIdOrderBySortOrderAscIdAsc(c1Id)).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void ADMIN保存维度_同一维度id提交2行时显示错误_原来的维度不变() throws Exception {
         // #22：改写隐藏的 id 直接 POST
         Course s3 = course("S3");
