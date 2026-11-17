@@ -1,5 +1,7 @@
 package com.example.training.web;
 
+import com.example.training.domain.Trainee;
+import com.example.training.domain.TraineeStatus;
 import com.example.training.repository.TraineeRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -104,17 +107,20 @@ class TraineeImportPageTest {
 
     @Test
     void 有行错误_列出全部错误且一条也不登记() throws Exception {
+        // 已有学员由测试自己准备，不依赖种子数据（测试结束后回滚）
+        traineeRepository.save(new Trainee("三 张", "san.zhang@example.com", "G 社",
+                TraineeStatus.ACTIVE, LocalDate.of(2026, 10, 1)));
         long before = traineeRepository.count();
 
-        // 第 2 行正确，第 3 行与种子数据的邮箱重复，第 4 行邮箱格式不正确
+        // 第 2 行正确，第 3 行与已有学员的邮箱重复，第 4 行邮箱格式不正确
         upload(HEADER
                 + "张 三,zhang.san@example.com,X 社,2026-11-01\n"
-                + "李 四,taro.yamada@example.com,X 社,2026-11-01\n"
+                + "李 四,san.zhang@example.com,X 社,2026-11-01\n"
                 + "王 五,wang.wu.example.com,X 社,2026-11-01\n")
                 .andExpect(status().isOk())
                 .andExpect(view().name("trainees/import"))
                 .andExpect(content().string(containsString("CSV 中有 2 处错误，未登记任何学员。")))
-                .andExpect(content().string(containsString("第 3 行：该邮箱已被已有学员使用（taro.yamada@example.com）")))
+                .andExpect(content().string(containsString("第 3 行：该邮箱已被已有学员使用（san.zhang@example.com）")))
                 .andExpect(content().string(containsString("第 4 行：邮箱（email）格式不正确（wang.wu.example.com）")));
 
         assertThat(traineeRepository.count()).isEqualTo(before);
@@ -134,11 +140,15 @@ class TraineeImportPageTest {
 
     @Test
     void 不是UTF8_显示另存为的方法() throws Exception {
+        long before = traineeRepository.count();
         byte[] gbk = (HEADER + "张 三,zhang.san@example.com,X 社,2026-11-01\n").getBytes("GBK");
 
         upload("gbk.csv", gbk)
                 .andExpect(status().isOk())
+                .andExpect(view().name("trainees/import"))
                 .andExpect(content().string(containsString("文件不是 UTF-8 编码")));
+
+        assertThat(traineeRepository.count()).isEqualTo(before);
     }
 
     @Test
