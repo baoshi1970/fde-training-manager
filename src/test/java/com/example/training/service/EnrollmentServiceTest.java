@@ -5,14 +5,18 @@ import com.example.training.domain.CourseCategory;
 import com.example.training.domain.Enrollment;
 import com.example.training.domain.Trainee;
 import com.example.training.domain.TraineeStatus;
+import com.example.training.repository.CriterionScoreRepository;
 import com.example.training.repository.EnrollmentRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +32,8 @@ class EnrollmentServiceTest {
     TraineeService traineeService;
     @Mock
     CourseService courseService;
+    @Mock
+    CriterionScoreRepository scoreRepository;
     @InjectMocks
     EnrollmentService service;
 
@@ -58,5 +64,21 @@ class EnrollmentServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("在籍");
         verify(enrollmentRepository, never()).save(any());
+    }
+
+    @Test
+    void S21_取消报名时_该报名的得分一起删除() {
+        Trainee t = new Trainee("山田 太郎", "a@example.com", "A 社", TraineeStatus.ACTIVE, today);
+        Enrollment e = new Enrollment(t, course, today);
+        ReflectionTestUtils.setField(e, "id", 5L);
+        when(enrollmentRepository.findById(5L)).thenReturn(Optional.of(e));
+
+        service.cancel(5L);
+
+        // 先删得分（外键），再删报名；只删这条报名的得分
+        InOrder order = inOrder(scoreRepository, enrollmentRepository);
+        order.verify(scoreRepository).deleteByEnrollmentId(5L);
+        order.verify(enrollmentRepository).delete(e);
+        verifyNoMoreInteractions(scoreRepository);
     }
 }

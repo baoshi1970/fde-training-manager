@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>评价维度设置 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1 th:text="'评价维度设置：' + ${course.displayName}">评价维度设置</h1>
+
+    <div class="flash ng" th:if="${locked}">
+        这门课程已有得分：只能修改维度名称，不能增加・删除维度或修改权重。
+    </div>
+
+    <form class="form" method="post" th:object="${form}"
+          th:action="@{/admin/courses/{id}/criteria(id=${course.id})}">
+        <table>
+            <thead><tr><th>#</th><th>维度名称</th><th>权重</th></tr></thead>
+            <tbody>
+            <tr th:each="row, st : *{rows}">
+                <td th:text="${st.count}">1</td>
+                <td>
+                    <input type="hidden" th:field="*{rows[__${st.index}__].id}">
+                    <input type="text" maxlength="50" th:field="*{rows[__${st.index}__].name}">
+                </td>
+                <td>
+                    <input type="number" min="1" max="100" step="1" class="weight"
+                           th:field="*{rows[__${st.index}__].weight}" th:readonly="${locked}">
+                </td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr><th></th><th>合计（必须为 100）</th><th id="weight-total">0</th></tr>
+            </tfoot>
+        </table>
+        <div class="field">
+            <div class="hint" th:unless="${locked}">
+                新增维度：填写空行。删除维度：把该行的名称和权重都清空。空行不会被保存。
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn">保存</button>
+            <a class="btn secondary" th:href="@{/courses}">返回课程管理</a>
+            <a class="btn secondary" th:href="@{/evaluations(courseId=${course.id})}">评分一览</a>
+        </div>
+    </form>
+
+    <script>
+        // 权重合计的实时显示（只是辅助，保存时由服务器检查）
+        (function () {
+            const inputs = document.querySelectorAll('input.weight');
+            const total = document.getElementById('weight-total');
+            function update() {
+                let sum = 0;
+                inputs.forEach(i => { const v = parseInt(i.value, 10); if (!isNaN(v)) sum += v; });
+                total.textContent = sum;
+                total.style.color = sum === 100 ? 'var(--ok)' : 'var(--ng)';
+            }
+            inputs.forEach(i => i.addEventListener('input', update));
+            update();
+        })();
+    </script>
+</section>
+</body>
+</html>
