@@ -1,0 +1,9 @@
+name,email,affiliation,joinedOn
+张 三,zhang.san@example.com,A 社 开发部,2026-11-01
+,li.si@example.com,A 社 开发部,2026-11-01
+王 五,wang.wu.example.com,A 社 开发部,2026-11-01
+
+赵 六,zhao.liu@example.com,A 社 开发部,2026/11/01
+孙 七,zhang.san@example.com,"A 社, 开发部",2026-11-01
+周 八,existing@example.com,A 社 开发部,2026-11-01
+吴 九,wu.jiu@example.com,A 社 开发部
