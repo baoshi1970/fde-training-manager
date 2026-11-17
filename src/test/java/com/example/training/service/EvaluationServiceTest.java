@@ -227,6 +227,24 @@ class EvaluationServiceTest {
         verify(criterionRepository).save(any());
     }
 
+    // ---------- S23 维度 id 重复（#22）：不能绕过合计 100 的检查 ----------
+
+    @Test
+    void S23_同一维度id提交2行不能保存_不更新也不删除() {
+        when(courseService.get(1L)).thenReturn(s2);
+        EvaluationCriterion understand = criterion(10L, s2, "理解", 60);
+        EvaluationCriterion practice = criterion(11L, s2, "实践", 40);
+        when(criterionRepository.findByCourseIdOrderBySortOrderAscIdAsc(1L)).thenReturn(List.of(understand, practice));
+
+        // 输入合计是 100，但两行都是 id=10 → 实际只会剩 1 行（合计 50），「实践」被删除
+        assertThatThrownBy(() -> service.saveCriteria(1L, List.of(input(10L, "X", 50), input(10L, "Y", 50))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("评价维度重复提交（id：10）。请重新打开画面后再保存");
+        assertThat(understand.getName()).isEqualTo("理解");
+        assertThat(understand.getWeight()).isEqualTo(60);
+        verify(criterionRepository, never()).deleteAll(anyCollection());
+    }
+
     @Test
     void S8_课程不存在() {
         when(courseService.get(99L)).thenThrow(new NotFoundException("课程", 99L));

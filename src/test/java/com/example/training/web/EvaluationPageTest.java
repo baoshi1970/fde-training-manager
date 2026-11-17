@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -242,5 +243,25 @@ class EvaluationPageTest {
                 .andExpect(content().string(containsString("维度名称不能超过 50 个字符（当前：51 字）")));
 
         assertThat(criteriaOf(s3)).isEmpty();
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void ADMIN保存维度_同一维度id提交2行时显示错误_原来的维度不变() throws Exception {
+        // #22：改写隐藏的 id 直接 POST
+        Course s3 = course("S3");
+        mvc.perform(post("/admin/courses/{id}/criteria", s3.getId()).with(csrf())
+                .param("rows[0].name", "理解").param("rows[0].weight", "60")
+                .param("rows[1].name", "实践").param("rows[1].weight", "40"));
+        String id = criteriaOf(s3).get(0).getId().toString();
+
+        mvc.perform(post("/admin/courses/{id}/criteria", s3.getId()).with(csrf())
+                        .param("rows[0].id", id).param("rows[0].name", "X").param("rows[0].weight", "50")
+                        .param("rows[1].id", id).param("rows[1].name", "Y").param("rows[1].weight", "50"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("评价维度重复提交（id：" + id + "）")));
+
+        assertThat(criteriaOf(s3)).extracting(EvaluationCriterion::getName, EvaluationCriterion::getWeight)
+                .containsExactly(tuple("理解", 60), tuple("实践", 40));
     }
 }

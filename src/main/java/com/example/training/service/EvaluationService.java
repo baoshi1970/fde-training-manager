@@ -87,9 +87,17 @@ public class EvaluationService {
 
         Map<Long, EvaluationCriterion> existing = findCriteria(courseId).stream()
                 .collect(Collectors.toMap(EvaluationCriterion::getId, Function.identity(), (a, b) -> a, LinkedHashMap::new));
+        Set<Long> inputIds = new HashSet<>();
         for (CriterionInput in : inputs) {
-            if (in.id() != null && !existing.containsKey(in.id())) {
+            if (in.id() == null) {
+                continue;                          // 新增行（可以有多行）
+            }
+            if (!existing.containsKey(in.id())) {
                 throw new NotFoundException("评价维度", in.id());
+            }
+            // 同一维度出现 2 次时，后一行会覆盖前一行，合计 100 的检查就失去意义（#22）
+            if (!inputIds.add(in.id())) {
+                throw new BusinessException("评价维度重复提交（id：" + in.id() + "）。请重新打开画面后再保存");
             }
         }
 
