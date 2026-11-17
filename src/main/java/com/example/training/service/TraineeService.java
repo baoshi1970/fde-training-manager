@@ -2,6 +2,7 @@ package com.example.training.service;
 
 import com.example.training.domain.Trainee;
 import com.example.training.domain.TraineeStatus;
+import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.EnrollmentRepository;
 import com.example.training.repository.TraineeRepository;
 import org.springframework.stereotype.Service;
@@ -16,10 +17,13 @@ public class TraineeService {
 
     private final TraineeRepository traineeRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceRepository attendanceRepository;
 
-    public TraineeService(TraineeRepository traineeRepository, EnrollmentRepository enrollmentRepository) {
+    public TraineeService(TraineeRepository traineeRepository, EnrollmentRepository enrollmentRepository,
+                          AttendanceRepository attendanceRepository) {
         this.traineeRepository = traineeRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.attendanceRepository = attendanceRepository;
     }
 
     /**
@@ -76,6 +80,8 @@ public class TraineeService {
         if (enrollmentRepository.existsByTraineeId(id)) {
             throw new BusinessException("该学员有报名记录，不能删除。请先取消报名，或把状态改为「结业」。");
         }
+        // 取消报名不会删出勤；学员本人都删了，留下的出勤没有意义，连同删除（否则外键约束会报 500）
+        attendanceRepository.deleteByTraineeId(id);
         traineeRepository.delete(trainee);
     }
 

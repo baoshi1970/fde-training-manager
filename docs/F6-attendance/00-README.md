@@ -23,15 +23,18 @@
 | Repository | `repository/AttendanceRepository.java` | 新增 |
 | Service | `service/AttendanceService.java` | 新增 |
 | Service | `service/SessionService.java`（删除课次时连带删出勤） | 修改 |
+| Service | `service/TraineeService.java`（删除学员时连带删出勤，评审指摘对应） | 修改 |
 | Controller | `web/AttendanceController.java` | 新增 |
 | 菜单 | `web/Feature.java`（F6 → done） | 修改 |
 | 画面 | `templates/attendance/list.html`、`form.html` | 新增 |
-| 画面 | `templates/sessions/list.html`（加「出勤」按钮） | 修改 |
+| 画面 | `templates/sessions/list.html`（加「出勤」按钮、删除确认提示出勤一起删除） | 修改 |
+| 画面 | `templates/trainees/list.html`（删除确认提示出勤一起删除） | 修改 |
 | 初始化 | `config/DataInitializer.java`（`resetToSeed` 先删出勤） | 修改 |
-| 测试 | `AttendanceServiceTest`、`AttendanceControllerTest`、`SessionServiceTest`（追加 2 例） | 新增/修改 |
+| 测试 | `AttendanceServiceTest`、`AttendanceControllerTest`、`SessionServiceTest`（追加 2 例）、`TraineeServiceTest`（追加 3 例） | 新增/修改 |
 
 ## 已知事项（供评审时确认，未擅自修改）
 
-1. **「未记录」人数的算法**：画面用「报名人数 − 出勤记录条数」计算（`form.html`）。如果某学员在登记出勤后被取消报名，出勤记录仍在，「未记录」会少算，极端情况下为负数。当前版本是否有「取消报名」功能需要确认；若有，应在取消报名时一并处理出勤，或改为只统计报名者的记录。
-2. **出勤以「课程」为单位判定报名者**：课次（CourseSession）属于课程（Course），报名（Enrollment）也是学员 × 课程，所以同一课程的所有课次都显示同一批报名者。
-3. **并发保存**：同一课次同时被两人保存时，依赖唯一约束 `(session_id, trainee_id)` 兜底，当前没有对约束冲突做友好提示（会出 500）。
+1. **（已对应：删除学员）** 取消报名后出勤记录仍在，此前直接删学员会报 500（PR #18 评审指出）。现改为删除学员时连同删除其出勤记录。
+2. **「未记录」人数的算法（仍未对应）**：画面用「报名人数 − 出勤记录条数」计算（`form.html`）。如果某学员在登记出勤后被取消报名，出勤记录仍在，「未记录」会少算，极端情况下为负数。「取消报名」功能确实存在（`/enrollments/{id}/cancel`），所以这个情况会发生。应在取消报名时一并处理出勤（F5 的范围），或改为只统计报名者的记录。
+3. **出勤以「课程」为单位判定报名者**：课次（CourseSession）属于课程（Course），报名（Enrollment）也是学员 × 课程，所以同一课程的所有课次都显示同一批报名者。
+4. **并发保存**：同一课次同时被两人保存时，依赖唯一约束 `(session_id, trainee_id)` 兜底，当前没有对约束冲突做友好提示（会出 500）。

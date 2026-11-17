@@ -35,7 +35,7 @@
             <td class="actions">
                 <a class="btn small secondary" th:href="@{/trainees/{id}/edit(id=${t.id})}">编辑</a>
                 <form th:action="@{/trainees/{id}/delete(id=${t.id})}" method="post"
-                      onsubmit="return confirm('确定删除这名学员吗？');">
+                      onsubmit="return confirm('确定删除这名学员吗？该学员的出勤记录也会一起删除。');">
                     <button type="submit" class="btn small danger">删除</button>
                 </form>
             </td>

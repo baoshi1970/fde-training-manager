@@ -2,7 +2,10 @@ package com.example.training.web;
 
 import com.example.training.domain.AttendanceStatus;
 import com.example.training.domain.CourseSession;
+import com.example.training.domain.Enrollment;
 import com.example.training.domain.Trainee;
+import com.example.training.domain.TraineeStatus;
+import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.CourseSessionRepository;
 import com.example.training.repository.EnrollmentRepository;
 import com.example.training.repository.TraineeRepository;
@@ -15,6 +18,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,6 +45,8 @@ class AttendanceControllerTest {
     TraineeRepository traineeRepository;
     @Autowired
     AttendanceService attendanceService;
+    @Autowired
+    AttendanceRepository attendanceRepository;
 
     private CourseSession s2Session() {
         return sessionRepository.findAll().stream()
@@ -124,6 +130,38 @@ class AttendanceControllerTest {
                 .andExpect(status().is3xxRedirection());
 
         assertThat(sessionRepository.existsById(s.getId())).isFalse();
+    }
+
+    @Test
+    @WithMockUser(username = "admin")
+    void 取消报名后删除学员_不报500_出勤一起删除() throws Exception {
+        CourseSession s = s2Session();
+        Trainee t = traineeRepository.save(new Trainee("测试 学员", "attendance-del@example.com", "A 社",
+                TraineeStatus.ACTIVE, LocalDate.of(2026, 10, 1)));
+        Enrollment e = enrollmentRepository.save(new Enrollment(t, s.getCourse(), LocalDate.of(2026, 11, 1)));
+        attendanceService.save(s.getId(), Map.of(t.getId(), AttendanceStatus.PRESENT));
+
+        // 取消报名：出勤记录还在（学员已经不在登记画面里）
+        mvc.perform(post("/enrollments/" + e.getId() + "/cancel").param("courseId", String.valueOf(s.getCourse().getId())).with(csrf()))
+                .andExpect(status().is3xxRedirection());
+        assertThat(attendanceRepository.existsByTraineeId(t.getId())).isTrue();
+
+        mvc.perform(post("/trainees/" + t.getId() + "/delete").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("message", "已删除学员"));
+
+        traineeRepository.flush();   // 让外键约束在这里生效（测试在事务里，不 flush 就发现不了 500）
+        assertThat(traineeRepository.existsById(t.getId())).isFalse();
+        assertThat(attendanceRepository.existsByTraineeId(t.getId())).isFalse();
+    }
+
+    @Test
+    @WithMockUser(username = "admin")
+    void 删除确认提示出勤记录也会一起删除() throws Exception {
+        mvc.perform(get("/sessions"))
+                .andExpect(content().string(containsString("出勤记录也会一起删除")));
+        mvc.perform(get("/trainees"))
+                .andExpect(content().string(containsString("出勤记录也会一起删除")));
     }
 
     @Test

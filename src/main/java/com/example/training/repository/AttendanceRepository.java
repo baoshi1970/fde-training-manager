@@ -13,4 +13,9 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     /** 删除课次时，连同出勤一起删 */
     void deleteBySessionId(Long sessionId);
+
+    boolean existsByTraineeId(Long traineeId);
+
+    /** 删除学员时，连同出勤一起删 */
+    void deleteByTraineeId(Long traineeId);
 }

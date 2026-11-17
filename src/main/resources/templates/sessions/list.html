@@ -32,7 +32,7 @@
                 <a class="btn small" th:href="@{/attendance/{id}(id=${s.id})}">出勤</a>
                 <a class="btn small secondary" th:href="@{/sessions/{id}/edit(id=${s.id})}">编辑</a>
                 <form th:action="@{/sessions/{id}/delete(id=${s.id})}" method="post"
-                      onsubmit="return confirm('确定删除这个课次吗？');">
+                      onsubmit="return confirm('确定删除这个课次吗？该课次的出勤记录也会一起删除。');">
                     <button type="submit" class="btn small danger">删除</button>
                 </form>
             </td>

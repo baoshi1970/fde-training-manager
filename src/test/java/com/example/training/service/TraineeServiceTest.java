@@ -2,6 +2,7 @@ package com.example.training.service;
 
 import com.example.training.domain.Trainee;
 import com.example.training.domain.TraineeStatus;
+import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.EnrollmentRepository;
 import com.example.training.repository.TraineeRepository;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,8 @@ class TraineeServiceTest {
     TraineeRepository traineeRepository;
     @Mock
     EnrollmentRepository enrollmentRepository;
+    @Mock
+    AttendanceRepository attendanceRepository;
     @InjectMocks
     TraineeService service;
 
@@ -75,6 +78,38 @@ class TraineeServiceTest {
 
         assertThatThrownBy(() -> service.delete(1L)).isInstanceOf(BusinessException.class);
         verify(traineeRepository, never()).delete(any());
+    }
+
+    @Test
+    void 删除_有报名记录时不动出勤() {
+        Trainee t = trainee("山田 太郎", "a@example.com");
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(t));
+        when(enrollmentRepository.existsByTraineeId(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.delete(1L)).isInstanceOf(BusinessException.class);
+        verify(attendanceRepository, never()).deleteByTraineeId(any());
+    }
+
+    @Test
+    void 删除_取消报名后留下出勤记录_连同出勤一起删() {
+        // 取消报名不会删出勤；之前直接删学员会因外键报 500
+        Trainee t = trainee("山田 太郎", "a@example.com");
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(t));
+        when(enrollmentRepository.existsByTraineeId(1L)).thenReturn(false);
+
+        service.delete(1L);
+
+        var order = inOrder(attendanceRepository, traineeRepository);
+        order.verify(attendanceRepository).deleteByTraineeId(1L);
+        order.verify(traineeRepository).delete(t);
+    }
+
+    @Test
+    void 删除_不存在的学员报NotFound_且不删出勤() {
+        when(traineeRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.delete(99L)).isInstanceOf(NotFoundException.class);
+        verify(attendanceRepository, never()).deleteByTraineeId(any());
     }
 
     @Test
