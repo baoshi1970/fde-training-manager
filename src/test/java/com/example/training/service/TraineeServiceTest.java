@@ -145,10 +145,6 @@ class TraineeServiceTest {
         return captor.getValue();
     }
 
-    private static String repeat(String s, int n) {
-        return s.repeat(n);
-    }
-
     // ---- 正常 ----
 
     @Test
@@ -202,8 +198,11 @@ class TraineeServiceTest {
     }
 
     @Test
-    void 导入_所属为空_可以登记() {
+    void 导入_所属为空_可以登记且保存为空字符串() {
         assertThat(service.importCsv(csv("张 三,zhang.san@example.com,,2026-11-01"))).isEqualTo(1);
+
+        // 和画面新增学员时一样保存 ""，不保存 null
+        assertThat(savedTrainees().get(0).getAffiliation()).isEqualTo("");
     }
 
     @Test
@@ -343,19 +342,19 @@ class TraineeServiceTest {
     @Test
     void 导入_邮箱格式不正确_报错() {
         assertThat(importErrors(csv("张 三,zhang.san.example.com,A 社,2026-11-01")))
-                .containsExactly("第 2 行：邮箱格式不正确（zhang.san.example.com）");
+                .containsExactly("第 2 行：邮箱（email）格式不正确（zhang.san.example.com）");
     }
 
     @Test
     void 导入_日期格式不正确_报错() {
         assertThat(importErrors(csv("张 三,zhang.san@example.com,A 社,2026/11/01")))
-                .containsExactly("第 2 行：入学日期不正确（2026/11/01），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01");
+                .containsExactly("第 2 行：入学日期（joinedOn）不正确（2026/11/01），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01");
     }
 
     @Test
     void 导入_不存在的日期_报错() {
         assertThat(importErrors(csv("张 三,zhang.san@example.com,A 社,2026-02-30")))
-                .containsExactly("第 2 行：入学日期不正确（2026-02-30），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01");
+                .containsExactly("第 2 行：入学日期（joinedOn）不正确（2026-02-30），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01");
     }
 
     @Test
@@ -386,6 +385,15 @@ class TraineeServiceTest {
     }
 
     @Test
+    void 导入_列数不对的行_邮箱不参加重复检查() {
+        // 列可能错位，第 2 行的第 2 列不一定是邮箱，所以第 3 行不报「与第 2 行重复」
+        assertThat(importErrors(csv(
+                "张 三,zhang.san@example.com,A 社",
+                "李 四,zhang.san@example.com,A 社,2026-11-01")))
+                .containsExactly("第 2 行：列数应为 4 列，实际 3 列");
+    }
+
+    @Test
     void 导入_列数太多_报错() {
         // 所属里有逗号却没加引号 → 被拆成 5 列
         assertThat(importErrors(csv("张 三,zhang.san@example.com,A 社, 开发部,2026-11-01")))
@@ -393,63 +401,65 @@ class TraineeServiceTest {
     }
 
     @Test
-    void 导入_只有逗号的行_必填项全部报错() {
+    void 导入_只有逗号的行_必填项全部报错且不查数据库() {
         assertThat(importErrors(csv(",,,")))
                 .containsExactly(
                         "第 2 行：姓名（name）不能为空",
                         "第 2 行：邮箱（email）不能为空",
                         "第 2 行：入学日期（joinedOn）不能为空");
+        // 文件里一个邮箱都没有时，不执行 IN () 为空的查询
+        verify(traineeRepository, never()).findByEmailIn(any());
     }
 
     // ---- 长度（边界值）----
 
     @Test
     void 导入_姓名正好50字_可以登记() {
-        assertThat(service.importCsv(csv(repeat("张", 50) + ",zhang.san@example.com,A 社,2026-11-01")))
+        assertThat(service.importCsv(csv("张".repeat(50) + ",zhang.san@example.com,A 社,2026-11-01")))
                 .isEqualTo(1);
     }
 
     @Test
     void 导入_姓名51字_报错() {
-        assertThat(importErrors(csv(repeat("张", 51) + ",zhang.san@example.com,A 社,2026-11-01")))
+        assertThat(importErrors(csv("张".repeat(51) + ",zhang.san@example.com,A 社,2026-11-01")))
                 .containsExactly("第 2 行：姓名（name）不能超过 50 个字符（当前 51 个，扩展汉字按 2 个字符计算）");
     }
 
     // 「𠮷」是扩展汉字，String.length() 为 2：25 个 = 50（OK）、26 个 = 52（NG）。和 F8（#23）的规则一致
     @Test
     void 导入_姓名为扩展汉字25个_按50字可以登记() {
-        assertThat(service.importCsv(csv(repeat("𠮷", 25) + ",zhang.san@example.com,A 社,2026-11-01")))
+        assertThat(service.importCsv(csv("𠮷".repeat(25) + ",zhang.san@example.com,A 社,2026-11-01")))
                 .isEqualTo(1);
     }
 
     @Test
     void 导入_姓名为扩展汉字26个_按52字报错() {
-        assertThat(importErrors(csv(repeat("𠮷", 26) + ",zhang.san@example.com,A 社,2026-11-01")))
+        assertThat(importErrors(csv("𠮷".repeat(26) + ",zhang.san@example.com,A 社,2026-11-01")))
                 .containsExactly("第 2 行：姓名（name）不能超过 50 个字符（当前 52 个，扩展汉字按 2 个字符计算）");
     }
 
     @Test
     void 导入_所属正好100字_可以登记() {
-        assertThat(service.importCsv(csv("张 三,zhang.san@example.com," + repeat("部", 100) + ",2026-11-01")))
+        assertThat(service.importCsv(csv("张 三,zhang.san@example.com," + "部".repeat(100) + ",2026-11-01")))
                 .isEqualTo(1);
     }
 
     @Test
     void 导入_所属101字_报错() {
-        assertThat(importErrors(csv("张 三,zhang.san@example.com," + repeat("部", 101) + ",2026-11-01")))
+        assertThat(importErrors(csv("张 三,zhang.san@example.com," + "部".repeat(101) + ",2026-11-01")))
                 .containsExactly("第 2 行：所属（affiliation）不能超过 100 个字符（当前 101 个，扩展汉字按 2 个字符计算）");
     }
 
     @Test
     void 导入_邮箱正好100字_可以登记() {
         // @Email 规定 @ 前面最多 64 字，所以把长度放在域名上：10 + 41 + 1 + 40 + 8 = 100
-        String email = "zhang.san@" + repeat("a", 41) + "." + repeat("b", 40) + ".example";
+        String email = "zhang.san@" + "a".repeat(41) + "." + "b".repeat(40) + ".example";
         assertThat(service.importCsv(csv("张 三," + email + ",A 社,2026-11-01"))).isEqualTo(1);
     }
 
     @Test
     void 导入_邮箱101字_报错() {
-        String email = "zhang.san@" + repeat("a", 42) + "." + repeat("b", 40) + ".example";   // 101
+        String email = "zhang.san@" + "a".repeat(42) + "." + "b".repeat(40) + ".example";   // 101
         assertThat(importErrors(csv("张 三," + email + ",A 社,2026-11-01")))
                 .containsExactly("第 2 行：邮箱（email）不能超过 100 个字符（当前 101 个，扩展汉字按 2 个字符计算）");
     }
@@ -471,8 +481,8 @@ class TraineeServiceTest {
         // 第 5 行是空行（跳过但计数），第 2 行正确，但因为其他行有错误也不登记
         assertThat(((CsvImportException) thrown).getErrors()).containsExactly(
                 "第 3 行：姓名（name）不能为空",
-                "第 4 行：邮箱格式不正确（wang.wu.example.com）",
-                "第 6 行：入学日期不正确（2026/11/01），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01",
+                "第 4 行：邮箱（email）格式不正确（wang.wu.example.com）",
+                "第 6 行：入学日期（joinedOn）不正确（2026/11/01），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01",
                 "第 7 行：邮箱与第 2 行重复（zhang.san@example.com）",
                 "第 8 行：该邮箱已被已有学员使用（existing@example.com）",
                 "第 9 行：列数应为 4 列，实际 3 列");
@@ -484,8 +494,8 @@ class TraineeServiceTest {
         assertThat(importErrors(csv(",bad-email,A 社,2026-13-01")))
                 .containsExactly(
                         "第 2 行：姓名（name）不能为空",
-                        "第 2 行：邮箱格式不正确（bad-email）",
-                        "第 2 行：入学日期不正确（2026-13-01），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01");
+                        "第 2 行：邮箱（email）格式不正确（bad-email）",
+                        "第 2 行：入学日期（joinedOn）不正确（2026-13-01），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01");
     }
 
     @Test
@@ -494,8 +504,8 @@ class TraineeServiceTest {
                 "张 三,bad-email,A 社,2026-11-01",
                 "李 四,bad-email,A 社,2026-11-01")))
                 .containsExactly(
-                        "第 2 行：邮箱格式不正确（bad-email）",
-                        "第 3 行：邮箱格式不正确（bad-email）",
+                        "第 2 行：邮箱（email）格式不正确（bad-email）",
+                        "第 3 行：邮箱（email）格式不正确（bad-email）",
                         "第 3 行：邮箱与第 2 行重复（bad-email）");
     }
 

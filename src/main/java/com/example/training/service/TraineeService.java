@@ -112,6 +112,7 @@ public class TraineeService {
      * @return 登记的件数
      * @throws BusinessException   文件级错误（空文件・表头不对・只有表头・超过 500 行・CSV 格式错误・不是 UTF-8）
      * @throws CsvImportException 行级错误（全部列出，一条也不登记）
+     * @throws java.io.UncheckedIOException 读取文件失败（不是业务错误，按系统错误处理）
      */
     @Transactional
     public int importCsv(InputStream in) {
@@ -197,7 +198,7 @@ public class TraineeService {
         } else {
             // 和画面新增学员一样，用 Trainee.email 上的 @Email 规则检查
             if (!validator.validateValue(Trainee.class, "email", email).isEmpty()) {
-                errors.add(prefix + "邮箱格式不正确（" + email + "）");
+                errors.add(prefix + "邮箱（email）格式不正确（" + email + "）");
             }
             checkLength(email, "邮箱（email）", MAX_EMAIL_LENGTH, prefix, errors);
             Integer firstLine = firstLineByEmail.putIfAbsent(email, row.lineNo());
@@ -220,7 +221,7 @@ public class TraineeService {
             try {
                 joinedOn = LocalDate.parse(joinedOnText);
             } catch (DateTimeParseException e) {
-                errors.add(prefix + "入学日期不正确（" + joinedOnText + "），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01");
+                errors.add(prefix + "入学日期（joinedOn）不正确（" + joinedOnText + "），应为 yyyy-MM-dd 格式的有效日期，如 2026-11-01");
             }
         }
 
