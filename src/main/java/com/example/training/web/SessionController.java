@@ -112,8 +112,12 @@ public class SessionController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id, RedirectAttributes ra) {
-        service.delete(id);
-        ra.addFlashAttribute("message", "已删除课次");
+        try {
+            service.delete(id);
+            ra.addFlashAttribute("message", "已删除课次");
+        } catch (BusinessException e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/sessions";
     }
 }

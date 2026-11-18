@@ -2,6 +2,7 @@ package com.example.training.service;
 
 import com.example.training.domain.Trainee;
 import com.example.training.domain.TraineeStatus;
+import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.EnrollmentRepository;
 import com.example.training.repository.TraineeRepository;
 import jakarta.validation.Validation;
@@ -36,6 +37,8 @@ class TraineeServiceTest {
     TraineeRepository traineeRepository;
     @Mock
     EnrollmentRepository enrollmentRepository;
+    @Mock
+    AttendanceRepository attendanceRepository;
 
     /** 邮箱格式检查用真实的 Validator（和画面的 @Email 规则一致） */
     static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
@@ -44,7 +47,7 @@ class TraineeServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TraineeService(traineeRepository, enrollmentRepository, VALIDATOR);
+        service = new TraineeService(traineeRepository, enrollmentRepository, attendanceRepository, VALIDATOR);
     }
 
     private Trainee trainee(String name, String email) {
@@ -92,6 +95,31 @@ class TraineeServiceTest {
 
         assertThatThrownBy(() -> service.delete(1L)).isInstanceOf(BusinessException.class);
         verify(traineeRepository, never()).delete(any());
+    }
+
+    @Test
+    void 删除_没有报名但有出勤记录则不能删() {
+        Trainee t = trainee("山田 太郎", "a@example.com");
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(t));
+        when(enrollmentRepository.existsByTraineeId(1L)).thenReturn(false);
+        when(attendanceRepository.existsByTraineeId(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.delete(1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("出勤记录");
+        verify(traineeRepository, never()).delete(any());
+    }
+
+    @Test
+    void 删除_没有报名也没有出勤记录则正常删除() {
+        Trainee t = trainee("山田 太郎", "a@example.com");
+        when(traineeRepository.findById(1L)).thenReturn(Optional.of(t));
+        when(enrollmentRepository.existsByTraineeId(1L)).thenReturn(false);
+        when(attendanceRepository.existsByTraineeId(1L)).thenReturn(false);
+
+        service.delete(1L);
+
+        verify(traineeRepository).delete(t);
     }
 
     @Test

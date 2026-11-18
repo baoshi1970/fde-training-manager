@@ -31,6 +31,7 @@ public class DataInitializer implements CommandLineRunner {
     private final CourseRepository courseRepo;
     private final CourseSessionRepository sessionRepo;
     private final EnrollmentRepository enrollmentRepo;
+    private final AttendanceRepository attendanceRepo;
     private final EvaluationCriterionRepository criterionRepo;
     private final CriterionScoreRepository scoreRepo;
     private final PasswordEncoder encoder;
@@ -40,6 +41,7 @@ public class DataInitializer implements CommandLineRunner {
     public DataInitializer(AppUserRepository userRepo, TraineeRepository traineeRepo,
                            InstructorRepository instructorRepo, CourseRepository courseRepo,
                            CourseSessionRepository sessionRepo, EnrollmentRepository enrollmentRepo,
+                           AttendanceRepository attendanceRepo,
                            EvaluationCriterionRepository criterionRepo, CriterionScoreRepository scoreRepo,
                            PasswordEncoder encoder, Clock clock, JdbcTemplate jdbc) {
         this.userRepo = userRepo;
@@ -48,6 +50,7 @@ public class DataInitializer implements CommandLineRunner {
         this.courseRepo = courseRepo;
         this.sessionRepo = sessionRepo;
         this.enrollmentRepo = enrollmentRepo;
+        this.attendanceRepo = attendanceRepo;
         this.criterionRepo = criterionRepo;
         this.scoreRepo = scoreRepo;
         this.encoder = encoder;
@@ -70,7 +73,8 @@ public class DataInitializer implements CommandLineRunner {
     @Transactional
     public void resetToSeed() {
         lockIfPostgres();
-        // 外键依赖：得分 → 评价维度・报名 → 课程…（被引用的后删）
+        // 外键依赖：出勤（→ 课次・学员）、得分 → 评价维度・报名 → 课程…（被引用的后删）
+        attendanceRepo.deleteAllInBatch();
         scoreRepo.deleteAllInBatch();
         criterionRepo.deleteAllInBatch();
         enrollmentRepo.deleteAllInBatch();

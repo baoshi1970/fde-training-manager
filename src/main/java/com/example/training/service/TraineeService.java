@@ -2,6 +2,7 @@ package com.example.training.service;
 
 import com.example.training.domain.Trainee;
 import com.example.training.domain.TraineeStatus;
+import com.example.training.repository.AttendanceRepository;
 import com.example.training.repository.EnrollmentRepository;
 import com.example.training.repository.TraineeRepository;
 import jakarta.validation.Validator;
@@ -34,12 +35,14 @@ public class TraineeService {
 
     private final TraineeRepository traineeRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final AttendanceRepository attendanceRepository;
     private final Validator validator;
 
     public TraineeService(TraineeRepository traineeRepository, EnrollmentRepository enrollmentRepository,
-                          Validator validator) {
+                          AttendanceRepository attendanceRepository, Validator validator) {
         this.traineeRepository = traineeRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.attendanceRepository = attendanceRepository;
         this.validator = validator;
     }
 
@@ -96,6 +99,10 @@ public class TraineeService {
         Trainee trainee = get(id);
         if (enrollmentRepository.existsByTraineeId(id)) {
             throw new BusinessException("该学员有报名记录，不能删除。请先取消报名，或把状态改为「结业」。");
+        }
+        // 取消报名后可能还留有出勤记录：直接删会因外键报 500
+        if (attendanceRepository.existsByTraineeId(id)) {
+            throw new BusinessException("该学员有出勤记录，不能删除。请把状态改为「结业」。");
         }
         traineeRepository.delete(trainee);
     }
