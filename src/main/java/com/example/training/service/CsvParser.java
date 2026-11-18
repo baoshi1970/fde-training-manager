@@ -24,7 +24,7 @@ import java.util.List;
  */
 public final class CsvParser {
 
-    private static final char BOM = '﻿';
+    private static final char BOM = '\uFEFF';
 
     /** 状态机的状态 */
     private enum State {

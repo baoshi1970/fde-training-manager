@@ -196,6 +196,7 @@ public class TraineeService {
         if (name.isEmpty()) {
             errors.add(prefix + "姓名（name）不能为空");
         } else {
+            checkLineBreak(name, "姓名（name）", prefix, errors);
             checkLength(name, "姓名（name）", MAX_NAME_LENGTH, prefix, errors);
         }
 
@@ -218,6 +219,7 @@ public class TraineeService {
         }
 
         // 所属（可以为空）
+        checkLineBreak(affiliation, "所属（affiliation）", prefix, errors);
         checkLength(affiliation, "所属（affiliation）", MAX_AFFILIATION_LENGTH, prefix, errors);
 
         // 入学日期：ISO 格式严格解析（2026-02-30・2026/11/01 都算错）
@@ -236,6 +238,17 @@ public class TraineeService {
             return null;
         }
         return new Trainee(name, email, affiliation, TraineeStatus.ACTIVE, joinedOn);
+    }
+
+    /**
+     * 换行检查。引号里的换行能通过 CSV 解析，但画面新增学员（单行输入框）输不进换行，
+     * 为了和新增学员的规则一致，导入时也不允许。前后的换行已被 clean() 去掉，这里只会是中间的换行。
+     * lines() 按 \r\n・\n・\r 任一种分行，分出 2 行以上就是含换行
+     */
+    private static void checkLineBreak(String value, String label, String prefix, List<String> errors) {
+        if (value.lines().count() > 1) {
+            errors.add(prefix + label + "不能包含换行（新增学员画面也不能输入换行）");
+        }
     }
 
     /**

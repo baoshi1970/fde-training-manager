@@ -439,6 +439,53 @@ class TraineeServiceTest {
         verify(traineeRepository, never()).findByEmailIn(any());
     }
 
+    // ---- 换行（引号里的换行能通过解析，但和新增学员画面一样不允许）----
+
+    @Test
+    void 导入_姓名中间有LF_报错() {
+        assertThat(importErrors(csv("\"张\n三\",zhang.san@example.com,A 社,2026-11-01")))
+                .containsExactly("第 2 行：姓名（name）不能包含换行（新增学员画面也不能输入换行）");
+    }
+
+    @Test
+    void 导入_姓名中间只有CR_也报错() {
+        assertThat(importErrors(csv("\"张\r三\",zhang.san@example.com,A 社,2026-11-01")))
+                .containsExactly("第 2 行：姓名（name）不能包含换行（新增学员画面也不能输入换行）");
+    }
+
+    @Test
+    void 导入_所属中间有CRLF_报错() {
+        assertThat(importErrors(csv("张 三,zhang.san@example.com,\"A 社\r\n开发部\",2026-11-01")))
+                .containsExactly("第 2 行：所属（affiliation）不能包含换行（新增学员画面也不能输入换行）");
+    }
+
+    @Test
+    void 导入_姓名和所属都有换行_两处都报且行号是记录开始行() {
+        // 第 2 行的记录跨到第 4 行；下一条记录从第 5 行开始，没有错误
+        assertThat(importErrors(csv(
+                "\"张\n三\",zhang.san@example.com,\"A 社\n开发部\",2026-11-01",
+                "李 四,li.si@example.com,A 社,2026-11-01")))
+                .containsExactly(
+                        "第 2 行：姓名（name）不能包含换行（新增学员画面也不能输入换行）",
+                        "第 2 行：所属（affiliation）不能包含换行（新增学员画面也不能输入换行）");
+    }
+
+    @Test
+    void 导入_前后的换行_去掉后可以登记() {
+        assertThat(service.importCsv(csv("\"\n张 三\n\",zhang.san@example.com,\"\r\nA 社\r\n\",2026-11-01")))
+                .isEqualTo(1);
+
+        Trainee saved = savedTrainees().get(0);
+        assertThat(saved.getName()).isEqualTo("张 三");
+        assertThat(saved.getAffiliation()).isEqualTo("A 社");
+    }
+
+    @Test
+    void 导入_邮箱中间有换行_按邮箱格式错误报() {
+        assertThat(importErrors(csv("张 三,\"zhang\n.san@example.com\",A 社,2026-11-01")))
+                .containsExactly("第 2 行：邮箱（email）格式不正确（zhang\n.san@example.com）");
+    }
+
     // ---- 长度（边界值）----
 
     @Test

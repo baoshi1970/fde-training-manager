@@ -298,9 +298,9 @@ class CsvParserTest {
 
     @Test
     void 中间位置的BOM_不去掉() {
-        List<CsvRecord> records = parse(HEADER + "\n﻿山田 太郎,a@example.com,A 社,2026-11-01\n");
+        List<CsvRecord> records = parse(HEADER + "\n\uFEFF山田 太郎,a@example.com,A 社,2026-11-01\n");
 
-        assertThat(records.get(1).fields().get(0)).isEqualTo("﻿山田 太郎");
+        assertThat(records.get(1).fields().get(0)).isEqualTo("\uFEFF山田 太郎");
     }
 
     // ---- 编码 ----
