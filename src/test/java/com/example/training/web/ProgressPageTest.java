@@ -72,6 +72,15 @@ class ProgressPageTest {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
+    void 表格下方的说明写出出勤的统计截止日() throws Exception {
+        // 「今天」用 Clock 的日期具体写出来，避免「今天」这个说法暧昧
+        mvc.perform(get("/progress"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("仅统计 " + LocalDate.now(clock) + " 及以前的课次")));
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void 没有出勤和评分时显示横线() throws Exception {
         mvc.perform(get("/progress"))
                 .andExpect(status().isOk())

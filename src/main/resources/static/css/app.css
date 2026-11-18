@@ -105,7 +105,7 @@ td.actions form { display: inline; }
 
 /* F9 学员进度看板：要关注的行标红 */
 tr.attention td { background: #fdf3f3; color: var(--ng); }
-.note { color: var(--muted); font-size: 13px; margin: 0 0 10px; }
+.note { color: var(--muted); font-size: 13px; margin: 10px 0 0; padding: 0; list-style: none; line-height: 1.8; }
 
 /* 登录 */
 .login-wrap { display: flex; justify-content: center; align-items: center; min-height: 100vh; }

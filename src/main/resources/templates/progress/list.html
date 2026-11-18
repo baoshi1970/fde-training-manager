@@ -10,12 +10,9 @@
 
     <form class="search" th:action="@{/progress}" method="get">
         <label><input type="checkbox" name="attention" value="true" th:checked="${attention}"> 只看要关注</label>
-        <button type="submit" class="btn secondary">检索</button>
+        <button type="submit" class="btn secondary">筛选</button>
         <a th:href="@{/progress}">清除条件</a>
     </form>
-
-    <p class="note">出勤率 ＝（出席＋迟到）÷ 已登记出勤的课次数，只统计今天及以前的课次。
-        平均分只算已完成评分的课程。出勤率低于 80% 或有 D 评级 → 要关注。</p>
 
     <table>
         <thead><tr><th>学员</th><th>报名课程数</th><th>出勤率</th><th>迟到次数</th><th>平均分</th><th>要关注</th></tr></thead>
@@ -33,6 +30,14 @@
         </tr>
         </tbody>
     </table>
+
+    <!-- 各列的说明：日期条件只适用于出勤（出勤率・迟到次数），不是整张表的条件 -->
+    <ul class="note">
+        <li th:text="|※ 出勤率＝（出席＋迟到）÷ 已登记次数，仅统计 ${today} 及以前的课次。|">※ 出勤率＝（出席＋迟到）÷ 已登记次数，仅统计 2026-11-18 及以前的课次。</li>
+        <li>※ 迟到次数：统计范围同出勤率。</li>
+        <li>※ 平均分：仅对已设置评价维度且全部评分完成的课程总分取平均，无符合条件的课程时显示「—」。</li>
+        <li>※ 要关注：出勤率低于 80%，或有 D 评级。</li>
+    </ul>
 </section>
 </body>
 </html>
