@@ -1,6 +1,6 @@
 package com.example.training.service;
 
-import com.example.training.service.ProgressCalculator.CourseScore;
+import com.example.training.domain.Grade;
 import com.example.training.service.ProgressCalculator.Progress;
 import org.junit.jupiter.api.Test;
 
@@ -13,14 +13,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /** 学员进度看板的计算规则（issue #9） */
 class ProgressCalculatorTest {
 
-    private static final List<CourseScore> 没有评分 = List.of();
+    private static final List<ScoreResult> 没有评分 = List.of();
 
-    private static CourseScore 已完成(String total, String grade) {
-        return new CourseScore(new BigDecimal(total), grade);
+    private static ScoreResult 已完成(String total, Grade grade) {
+        return new ScoreResult(true, new BigDecimal(total), grade);
     }
 
-    private static CourseScore 未完成() {
-        return new CourseScore(null, null);
+    private static ScoreResult 未完成() {
+        return ScoreResult.incomplete();
     }
 
     // ---- 出勤率 ----
@@ -120,7 +120,7 @@ class ProgressCalculatorTest {
 
     @Test
     void 评分_1门课程则为该课程总分() {
-        Progress p = ProgressCalculator.calculate(10, 0, 10, List.of(已完成("79.0", "B")));
+        Progress p = ProgressCalculator.calculate(10, 0, 10, List.of(已完成("79.0", Grade.B)));
 
         assertThat(p.averageScore()).isEqualByComparingTo("79.0");
     }
@@ -128,7 +128,7 @@ class ProgressCalculatorTest {
     @Test
     void 评分_未完成的课程不算进平均() {
         Progress p = ProgressCalculator.calculate(10, 0, 10,
-                List.of(已完成("79.0", "B"), 未完成(), 已完成("85.0", "A")));
+                List.of(已完成("79.0", Grade.B), 未完成(), 已完成("85.0", Grade.A)));
 
         assertThat(p.averageScore()).isEqualByComparingTo("82.0");
     }
@@ -136,7 +136,7 @@ class ProgressCalculatorTest {
     @Test
     void 评分_平均分四舍五入到小数1位() {
         Progress p = ProgressCalculator.calculate(10, 0, 10,
-                List.of(已完成("79.0", "B"), 已完成("80.1", "B")));
+                List.of(已完成("79.0", Grade.B), 已完成("80.1", Grade.B)));
 
         // (79.0 + 80.1) ÷ 2 = 79.55 → 79.6
         assertThat(p.averageScore()).isEqualTo(new BigDecimal("79.6"));
@@ -146,7 +146,7 @@ class ProgressCalculatorTest {
 
     @Test
     void 关注_只有D评级也要关注() {
-        Progress p = ProgressCalculator.calculate(10, 0, 10, List.of(已完成("50.0", "D")));
+        Progress p = ProgressCalculator.calculate(10, 0, 10, List.of(已完成("50.0", Grade.D)));
 
         assertThat(p.attendanceRate()).isEqualTo(100);
         assertThat(p.attention()).isTrue();
@@ -154,7 +154,7 @@ class ProgressCalculatorTest {
 
     @Test
     void 关注_没有出勤记录但有D评级要关注() {
-        Progress p = ProgressCalculator.calculate(0, 0, 0, List.of(已完成("50.0", "D")));
+        Progress p = ProgressCalculator.calculate(0, 0, 0, List.of(已完成("50.0", Grade.D)));
 
         assertThat(p.attendanceRate()).isNull();
         assertThat(p.attention()).isTrue();
@@ -162,7 +162,7 @@ class ProgressCalculatorTest {
 
     @Test
     void 关注_出勤率低且有D评级要关注() {
-        Progress p = ProgressCalculator.calculate(5, 0, 10, List.of(已完成("50.0", "D")));
+        Progress p = ProgressCalculator.calculate(5, 0, 10, List.of(已完成("50.0", Grade.D)));
 
         assertThat(p.attention()).isTrue();
     }
@@ -170,7 +170,7 @@ class ProgressCalculatorTest {
     @Test
     void 关注_出勤80百分比且没有D评级不要关注() {
         Progress p = ProgressCalculator.calculate(8, 0, 10,
-                List.of(已完成("60.0", "C"), 已完成("85.0", "A")));
+                List.of(已完成("60.0", Grade.C), 已完成("85.0", Grade.A)));
 
         assertThat(p.attention()).isFalse();
     }

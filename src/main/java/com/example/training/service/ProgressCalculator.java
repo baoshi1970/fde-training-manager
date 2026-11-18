@@ -1,5 +1,7 @@
 package com.example.training.service;
 
+import com.example.training.domain.Grade;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
@@ -9,26 +11,11 @@ import java.util.Objects;
  * 学员进度看板的计算（issue #9）。
  * <p>
  * 只收数字、不碰数据库：「课次日期 ≤ 今天」「按不同课程数报名」等条件在查询里处理，这里只做计算。
- * 不依赖 F6・F8 的实体，评级用字符串 "A"〜"D" 接收。
+ * 评分结果直接用 F8 的 {@link ScoreResult}（评级是 {@link Grade}），不重复定义。
  */
 public final class ProgressCalculator {
 
-    private static final String GRADE_D = "D";
-
     private ProgressCalculator() {
-    }
-
-    /**
-     * 一门课程的评分结果
-     *
-     * @param total 总分（小数 1 位）。未完成评分时为 null
-     * @param grade 评级 "A"〜"D"。未完成评分时为 null
-     */
-    public record CourseScore(BigDecimal total, String grade) {
-
-        boolean complete() {
-            return total != null;
-        }
     }
 
     /**
@@ -46,9 +33,9 @@ public final class ProgressCalculator {
      * @param present  出席数
      * @param late     迟到数
      * @param recorded 已登记出勤的记录数（出席＋迟到＋缺席）
-     * @param scores   该学员各课程的评分结果（含未完成）
+     * @param scores   该学员各课程的评分结果（F8 的计算结果，含未完成）
      */
-    public static Progress calculate(int present, int late, int recorded, List<CourseScore> scores) {
+    public static Progress calculate(int present, int late, int recorded, List<ScoreResult> scores) {
         // 查询结果不可能出现这些值，出现就是程序错误，所以不用 BusinessException
         if (present < 0 || late < 0 || recorded < 0) {
             throw new IllegalArgumentException("出勤数不能是负数");
@@ -77,17 +64,17 @@ public final class ProgressCalculator {
     }
 
     /** 只看已完成评分的课程。评级由 F8 决定，这里不重复判断分数线 */
-    private static boolean hasGradeD(List<CourseScore> scores) {
+    private static boolean hasGradeD(List<ScoreResult> scores) {
         return scores.stream()
-                .filter(CourseScore::complete)
-                .anyMatch(s -> GRADE_D.equals(s.grade()));
+                .filter(ScoreResult::complete)
+                .anyMatch(s -> s.grade() == Grade.D);
     }
 
     /** 未完成的课程不算进分母。简单平均（不按学时加权），四舍五入到小数 1 位 */
-    private static BigDecimal averageScore(List<CourseScore> scores) {
+    private static BigDecimal averageScore(List<ScoreResult> scores) {
         List<BigDecimal> totals = scores.stream()
-                .filter(CourseScore::complete)
-                .map(CourseScore::total)
+                .filter(ScoreResult::complete)
+                .map(ScoreResult::total)
                 .toList();
         if (totals.isEmpty()) {
             return null;
