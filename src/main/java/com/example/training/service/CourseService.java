@@ -2,6 +2,9 @@ package com.example.training.service;
 
 import com.example.training.domain.Course;
 import com.example.training.repository.CourseRepository;
+import com.example.training.repository.CourseSessionRepository;
+import com.example.training.repository.EnrollmentRepository;
+import com.example.training.repository.EvaluationCriterionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,9 +16,19 @@ import java.util.List;
 public class CourseService {
 
     private final CourseRepository courseRepository;
+    // 注入 Repository 而不是 SessionService：SessionService 已依赖本类，反过来依赖会循环
+    private final CourseSessionRepository sessionRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    // 同上：EvaluationService 已依赖本类，所以注入 Repository
+    private final EvaluationCriterionRepository criterionRepository;
 
-    public CourseService(CourseRepository courseRepository) {
+    public CourseService(CourseRepository courseRepository, CourseSessionRepository sessionRepository,
+                         EnrollmentRepository enrollmentRepository,
+                         EvaluationCriterionRepository criterionRepository) {
         this.courseRepository = courseRepository;
+        this.sessionRepository = sessionRepository;
+        this.enrollmentRepository = enrollmentRepository;
+        this.criterionRepository = criterionRepository;
     }
 
     public List<Course> findAll() {
@@ -52,6 +65,16 @@ public class CourseService {
     @Transactional
     public void delete(Long id) {
         Course course = get(id);
+        // 课次・报名都有外键指向课程，直接删会被数据库拒绝（500），所以先检查
+        if (sessionRepository.existsByCourseId(id)) {
+            throw new BusinessException("该课程已有课次，不能删除。请先删除相关课次。");
+        }
+        if (enrollmentRepository.existsByCourseId(id)) {
+            throw new BusinessException("该课程已有学员报名，不能删除。请先取消相关报名。");
+        }
+        // 评价维度（F8）是课程的设置，跟着课程一起删除。
+        // 得分挂在报名上，有报名时上面已经拦住，所以走到这里时一定没有得分
+        criterionRepository.deleteByCourseId(id);
         courseRepository.delete(course);
     }
 

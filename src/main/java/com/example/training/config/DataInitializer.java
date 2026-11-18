@@ -31,6 +31,8 @@ public class DataInitializer implements CommandLineRunner {
     private final CourseRepository courseRepo;
     private final CourseSessionRepository sessionRepo;
     private final EnrollmentRepository enrollmentRepo;
+    private final EvaluationCriterionRepository criterionRepo;
+    private final CriterionScoreRepository scoreRepo;
     private final PasswordEncoder encoder;
     private final Clock clock;
     private final JdbcTemplate jdbc;
@@ -38,6 +40,7 @@ public class DataInitializer implements CommandLineRunner {
     public DataInitializer(AppUserRepository userRepo, TraineeRepository traineeRepo,
                            InstructorRepository instructorRepo, CourseRepository courseRepo,
                            CourseSessionRepository sessionRepo, EnrollmentRepository enrollmentRepo,
+                           EvaluationCriterionRepository criterionRepo, CriterionScoreRepository scoreRepo,
                            PasswordEncoder encoder, Clock clock, JdbcTemplate jdbc) {
         this.userRepo = userRepo;
         this.traineeRepo = traineeRepo;
@@ -45,6 +48,8 @@ public class DataInitializer implements CommandLineRunner {
         this.courseRepo = courseRepo;
         this.sessionRepo = sessionRepo;
         this.enrollmentRepo = enrollmentRepo;
+        this.criterionRepo = criterionRepo;
+        this.scoreRepo = scoreRepo;
         this.encoder = encoder;
         this.clock = clock;
         this.jdbc = jdbc;
@@ -65,6 +70,9 @@ public class DataInitializer implements CommandLineRunner {
     @Transactional
     public void resetToSeed() {
         lockIfPostgres();
+        // 外键依赖：得分 → 评价维度・报名 → 课程…（被引用的后删）
+        scoreRepo.deleteAllInBatch();
+        criterionRepo.deleteAllInBatch();
         enrollmentRepo.deleteAllInBatch();
         sessionRepo.deleteAllInBatch();
         courseRepo.deleteAllInBatch();
@@ -136,5 +144,13 @@ public class DataInitializer implements CommandLineRunner {
             enrollmentRepo.save(new Enrollment(t, s2, monday.minusWeeks(1)));
         }
         enrollmentRepo.save(new Enrollment(t8, s2, monday.minusWeeks(1)));
+
+        // ---- 评价维度（F8）：只给 S2 设置（Issue #8 的评价表）。其他课程由管理员在画面上设置 ----
+        String[][] s2Criteria = {
+                {"三段法", "25"}, {"给上下文・拆小", "15"}, {"让 AI 跑测试", "15"},
+                {"不盲信・读懂 diff", "20"}, {"Skill 创建", "15"}, {"协作・主动性", "10"}};
+        for (int i = 0; i < s2Criteria.length; i++) {
+            criterionRepo.save(new EvaluationCriterion(s2, s2Criteria[i][0], Integer.parseInt(s2Criteria[i][1]), i));
+        }
     }
 }

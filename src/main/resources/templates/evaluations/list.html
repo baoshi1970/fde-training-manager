@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>加权评分 | 培训管理系统</title></head>
+<body>
+<section>
+    <h1>加权评分</h1>
+
+    <form class="search" th:action="@{/evaluations}" method="get">
+        <label>课程</label>
+        <select name="courseId" onchange="this.form.submit()">
+            <option th:each="c : ${courses}" th:value="${c.id}" th:text="${c.displayName}"
+                    th:selected="${c.id == courseId}">S2 AI 辅助编码</option>
+        </select>
+    </form>
+
+    <th:block th:if="${course != null}">
+        <th:block th:if="${#lists.isEmpty(criteria)}">
+            <p class="empty">
+                这门课程还没有设置评价维度（未设置评价维度），暂时不能打分。
+                <a sec:authorize="hasRole('ADMIN')"
+                   th:href="@{/admin/courses/{id}/criteria(id=${course.id})}">去设置评价维度</a>
+            </p>
+        </th:block>
+
+        <th:block th:unless="${#lists.isEmpty(criteria)}">
+            <h2 th:text="${course.displayName} + ' 的评分（' + ${#lists.size(rows)} + ' 人）'">评分</h2>
+            <p style="color:var(--muted)">
+                总分 ＝ Σ(权重 × 得分) ÷ 5（满分 100）。评级：≥85 A ／ ≥70 B ／ ≥60 C ／ 其余 D。
+                没打完所有维度时显示「未完成」。
+            </p>
+            <table>
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>学员</th>
+                    <th th:each="c : ${criteria}">
+                        <span th:text="${c.name}">三段法</span><br>
+                        <small th:text="'权重 ' + ${c.weight}">权重 25</small>
+                    </th>
+                    <th>总分（评级）</th>
+                    <th sec:authorize="hasAnyRole('ADMIN', 'INSTRUCTOR')">操作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row, st : ${rows}">
+                    <td th:text="${st.count}">1</td>
+                    <td th:text="${row.enrollment.trainee.name}">山田 太郎</td>
+                    <td th:each="c : ${criteria}" th:text="${row.scores[c.id] ?: '－'}">4</td>
+                    <td th:if="${row.result.complete}"
+                        th:text="${row.result.total + '（' + row.result.grade + '）'}"><strong>79.0（B）</strong></td>
+                    <td th:unless="${row.result.complete}" style="color:var(--muted)">未完成</td>
+                    <td class="actions" sec:authorize="hasAnyRole('ADMIN', 'INSTRUCTOR')">
+                        <a class="btn small secondary"
+                           th:href="@{/evaluations/{id}/edit(id=${row.enrollment.id})}">打分</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(rows)}">
+                    <td th:colspan="${#lists.size(criteria) + 4}" class="empty">还没有人报名</td>
+                </tr>
+                </tbody>
+            </table>
+            <p sec:authorize="hasRole('ADMIN')" style="color:var(--muted)">
+                <a th:href="@{/admin/courses/{id}/criteria(id=${course.id})}">评价维度设置</a>
+            </p>
+        </th:block>
+    </th:block>
+</section>
+</body>
+</html>
