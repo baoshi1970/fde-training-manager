@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: layout(~{::title}, ~{::section})}">
+<head><title>学员进度看板 | 培训管理系统</title></head>
+<body>
+<section>
+    <div class="page-head">
+        <h1>学员进度看板</h1>
+    </div>
+
+    <form class="search" th:action="@{/progress}" method="get">
+        <label><input type="checkbox" name="attention" value="true" th:checked="${attention}"> 只看要关注</label>
+        <button type="submit" class="btn secondary">筛选</button>
+        <a th:href="@{/progress}">清除条件</a>
+    </form>
+
+    <table>
+        <thead><tr><th>学员</th><th>报名课程数</th><th>出勤率</th><th>迟到次数</th><th>平均分</th><th>要关注</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${rows}" th:classappend="${r.progress.attention} ? 'attention'">
+            <td th:text="${r.trainee.name}">山田 太郎</td>
+            <td th:text="${r.courseCount}">3</td>
+            <td th:text="${r.progress.attendanceRate != null} ? ${r.progress.attendanceRate + '%'} : '—'">75%</td>
+            <td th:text="${r.progress.lateCount}">1</td>
+            <td th:text="${r.progress.averageScore != null} ? ${r.progress.averageScore} : '—'">79.0</td>
+            <td><span th:if="${r.progress.attention}" class="badge ng">要关注</span></td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(rows)}">
+            <td colspan="6" class="empty" th:text="${attention} ? '没有要关注的学员' : '没有在籍学员'">没有在籍学员</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- 各列的说明：日期条件只适用于出勤（出勤率・迟到次数），不是整张表的条件 -->
+    <ul class="note">
+        <li th:text="|※ 出勤率＝（出席＋迟到）÷ 已登记次数，仅统计 ${today} 及以前的课次。|">※ 出勤率＝（出席＋迟到）÷ 已登记次数，仅统计 2026-11-18 及以前的课次。</li>
+        <li>※ 迟到次数：统计范围同出勤率。</li>
+        <li>※ 平均分：仅对已设置评价维度且全部评分完成的课程总分取平均，无符合条件的课程时显示「—」。</li>
+        <li>※ 要关注：出勤率低于 80%，或有 D 评级。</li>
+    </ul>
+</section>
+</body>
+</html>
