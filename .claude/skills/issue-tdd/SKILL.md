@@ -9,17 +9,18 @@ description: 按「读 issue → 列边界 → 先写测试 → 实现 → 贴�
 
 ## 什么时候用
 
-**判断标准**：issue 要「在已有的 Service 上加一条（或修改一条）报错／不报错的规则」时使用。改动基本只在 Service（加上需要的 Repository 方法）和它的测试里。
+**判断标准**：issue 要「在已有的 Service 上加一条（或修改一条）报错／不报错的规则」时使用。改动基本只在 Service（加上需要的 Repository 方法）和测试里（需要时加画面测试，如 `EvaluationPageTest` 里，#21 加了确认不再报 500 的测试，#22 加了确认画面显示错误、原来的维度不变的测试）。`Feature.java` 改成 `done = true` 是第 5 步收尾时等用户指示再做的，不算超出范围。
 
 | issue 的例子 | 用不用 |
 |---|---|
 | #7 排课冲突检查、#12 禁止重复报名、#21 名称超过 50 个字符报 500、#22 绕过「权重合计 100」 | ✅ 用 |
-| #16 ADMIN 也应该可以打分（放宽规则：原来报错的情况改成不报错） | ✅ 用（注意第 3 步的红绿判断） |
+| 放宽 Service 里的规则（原来报错的情况改成不报错） | ✅ 用（注意第 3 步的红绿判断） |
+| #16 ADMIN 也应该可以打分（改的是 `SecurityConfig` 的权限设置和画面，不在 Service 里） | ❌ 不用：权限设置和画面 |
 | #10 CSV 导入学员（新类、新画面、文件上传） | ❌ 不用：新功能 |
 | #9 学员进度看板（汇总查询、新画面） | ❌ 不用：新功能 |
 | 只改文案、样式、文档 | ❌ 不用：直接改，跑测试即可 |
 
-拿不准时，先问用户。用了以后发现要新建类、画面或改 `Feature.java`，停下来告诉用户「这个 issue 超出了 issue-tdd 的范围」，不要硬套。
+拿不准时，先问用户。用了以后发现要新建类、新画面，停下来告诉用户「这个 issue 超出了 issue-tdd 的范围」，不要硬套。
 
 ## 步骤
 
@@ -44,7 +45,7 @@ description: 按「读 issue → 列边界 → 先写测试 → 实现 → 贴�
 ### 第 2 步：列边界情况、给方案（不改代码）
 
 1. **边界情况表**：每一行对应一条测试，写清「输入 → 期望（报错／不报错）→ 测试方法名」。至少考虑：
-   - 相接（两个方向都要测：前接、后接）、部分重叠（前／后）、完全包含（两个方向）、完全相同
+   - 时间段类的规则（如 #7 排课冲突）：相接（两个方向都要测：前接、后接）、部分重叠（前／后）、完全包含（两个方向）、完全相同
    - 不同的人・不同的日期等「不应该被拦住」的情况
    - 空（没有数据）、0、重复、相等
    - **修改时排除自己**，以及它的反面：修改时跟别的数据冲突仍然要报错；新增时即使表单带了 id 也不能排除
@@ -64,16 +65,18 @@ description: 按「读 issue → 列边界 → 先写测试 → 实现 → 贴�
    - 「不报错」的测试用 `lenient()` stub。否则实现前 stub 不会被调用，Mockito 严格模式报 `UnnecessaryStubbingException`，测试会因为错误的原因失败
    - 「不同讲师」「不同日期」这类测试：把**错误的查询条件也 stub 成能查到冲突**。实现查错了条件就会报错，只看结果也能发现
    - 「先报哪个错」的测试：stub 一条会冲突的数据，只断言消息是先报的那个
-   - 测试方法名可以用中文，但**类名（包括 `@Nested` 内部类）用英文**，中文显示名放 `@DisplayName`。`@Nested` 会生成 `外部类$内部类.class`，中文类名在日文・中文 Windows 上 clean 构建会失败（见 `328e1cc`）
+   - 测试方法名可以用中文，但**类名（包括 `@Nested` 内部类）用英文**，中文显示名放 `@DisplayName`。`@Nested` 会生成 `外部类$内部类.class`，中文类名在日文 Windows（MS932）上已确认 clean 构建会失败（见 `328e1cc`）
    - 需要 CRLF 换行的测试数据在测试代码里生成（`"a\r\nb"`），不要放文件：仓库的 `.gitattributes` 是 `eol=lf`，提交时会被转成 LF
 2. **用户同意时**，加 `@DataJpaTest` + `@Import(Service 类...)`，在 H2 上用真实 Repository 走 Service 的公开方法，用 `count()` 确认「冲突时没保存」。
 3. 测试需要新的 Repository 方法才能编译时，**先问用户**能不能只加这一行方法声明（不含业务逻辑）。不要自己先加。
 4. 跑 `mvnw.cmd test`（Windows）或 `./mvnw test`，确认红绿分布：
-   - 失败的**只有**「新规则会改变结果」的测试：加规则时是「应该报错」的测试；放宽规则时（如 #16）是「应该不报错」的测试
+   - 失败的**只有**「新规则会改变结果」的测试：加规则时是「应该报错」的测试；放宽规则时是「应该不报错」的测试
    - 失败原因是**断言不一致**，而且和现在的代码对得上：
-     - 现在不报错、应该报错 → `Expecting code to raise a throwable`
-     - 现在报了别的异常（如修 500 时的 `DataIntegrityViolationException`）、应该报 `BusinessException` → 异常类型不一致
-     - 现在报错、应该不报错 → 测试里抛出了 `BusinessException`
+     - 现在不报错、应该报错 → `Expecting code to raise a throwable`。修 500 的 issue 用 Mockito 测试时也是这个：Repository 是 mock，不会抛数据库的异常（例：#21 的 `EvaluationServiceTest`，`fe10b08`）
+     - 修 500 的 issue 加了走真实数据库的测试时（例：#21 修复前的实测结果）：
+       - `@DataJpaTest` 里用 `assertThatThrownBy(...).isInstanceOf(BusinessException.class)` → 异常类型不一致（`Expecting actual throwable to be an instance of ... but was: DataIntegrityViolationException`）
+       - MockMvc 测试 → 测试出错（error），报 `Request processing failed: ...DataIntegrityViolationException`
+     - 现在报错、应该不报错 → 用 `assertThatCode(...).doesNotThrowAnyException()` 写的是 `Expecting code not to raise a throwable but caught ... BusinessException`；直接调用的是测试出错（error），报 `BusinessException`
    - 不能是编译错误、`UnnecessaryStubbingException`、`NullPointerException` 这类测试本身的问题
    - 其他测试和原有测试全部通过，件数和第 0 步的基线对得上
 
@@ -93,20 +96,20 @@ description: 按「读 issue → 列边界 → 先写测试 → 实现 → 贴�
 2. **git diff**：贴实现代码的 diff。测试文件太长时只写行数统计。
 3. **画面确认**：
    - 自己之前在后台启动过应用的，用 TaskStop 停掉，确认 8080 端口释放后，再在后台执行 `spring-boot:run`
-   - 8080 被不是自己启动的进程占着时，不要去停它（可能是用户自己开的），问用户；或者加 `-Dspring-boot.run.arguments=--server.port=8081` 换端口
+   - 8080 被不是自己启动的进程占着时，不要去停它（可能是用户自己开的），问用户；或者加 `-Dspring-boot.run.arguments=--server.port=8081` 换端口（在 PowerShell 里执行时整个参数要加引号：`"-Dspring-boot.run.arguments=--server.port=8081"`）
    - 等日志出现 `Started TrainingManagerApplication`
-   - 用 curl 登录 admin，按表单的字段（带上 `_csrf`）提交。页面上可能有多个 `_csrf`（共通布局里的退出表单也有一个），取要提交的那个表单里的。中文参数用 **UTF-8 百分号编码**（系统代码页不是 UTF-8 时，Git Bash 直接传中文会乱码：日文 Windows 是 cp932，中文 Windows 是 GBK）
+   - 用 curl 登录 admin，按表单的字段（带上 `_csrf`）提交。页面上可能有多个 `_csrf`（共通布局里的退出表单也有一个），取要提交的那个表单里的。中文参数用 **UTF-8 百分号编码**（日文 Windows（cp932）的 Git Bash 里已确认：直接传中文，服务器收到的是乱码，查不到数据。其他非 UTF-8 的代码页没有确认过，同样按百分号编码处理）
    - 至少试：应该报错的一种、边界上不报错的一种、修改时只改无关字段的一种
 4. **确认测试真的在测**（用户要求时）：
    - 先用 `git hash-object <文件>` 记下哈希值
    - 临时注释掉关键的一行，跑测试，贴出哪几条失败、失败原因是什么
    - 恢复原样，再跑一次，确认全部通过
-   - 再算一次哈希值，确认和注释前一致。`git diff` 比较的是 HEAD，看不出注释前后的差别，所以用哈希比对
+   - 再算一次哈希值，确认和注释前一致。`git diff` 比较的是暂存区（`git diff HEAD` 才比较 HEAD），文件本来就有未提交的修改时，看不出是否恢复到了注释前的状态，所以用哈希比对
 5. 列出还没做的事（`web/Feature.java` 改成 `done = true`、提交、PR），**等用户指示**。
 
 ## 读测试结果的小技巧
 
-- 系统代码页不是 UTF-8 时（日文 Windows 的 cp932、中文 Windows 的 GBK），Maven 控制台里的中文测试名可能变成乱码。要从 `target/surefire-reports/TEST-*.xml` 读，并且把结果写进 UTF-8 文件再读。直接 `print` 到控制台可能出 `UnicodeEncodeError`。
+- 日文 Windows（cp932）上已确认：Maven 控制台里的中文测试名会变成乱码；Python 的输出重定向或接管道时用 cp932 编码，`print` 简体中文会出 `UnicodeEncodeError`。所以要从 `target/surefire-reports/TEST-*.xml` 读，并且把结果写进 UTF-8 文件再读。其他非 UTF-8 的代码页没有确认过，同样处理。
 - 用 `| Select-String "Tests run:"` 过滤输出之前，先确认测试真的跑了：编译失败时 `target/surefire-reports` 里还是**上一次的旧报告**，看文件时间戳。
 - 示例脚本（本机有 Python 时），用 `python -I - <输出文件>` 执行。没有 Python 就直接读 XML 文件里的 `tests`・`failures`・`errors` 属性：
 
