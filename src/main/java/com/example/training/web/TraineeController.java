@@ -3,14 +3,19 @@ package com.example.training.web;
 import com.example.training.domain.Trainee;
 import com.example.training.domain.TraineeStatus;
 import com.example.training.service.BusinessException;
+import com.example.training.service.CsvImportException;
 import com.example.training.service.TraineeService;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Clock;
 import java.time.LocalDate;
 
@@ -86,6 +91,41 @@ public class TraineeController {
             return "trainees/form";
         }
         ra.addFlashAttribute("message", "已更新学员：" + trainee.getName());
+        return "redirect:/trainees";
+    }
+
+    // ================= F10 CSV 导入 =================
+
+    @GetMapping("/import")
+    public String importForm() {
+        return "trainees/import";
+    }
+
+    /**
+     * 上传 CSV 并导入。有错误时回到上传画面，一条也不登记。
+     * 读取上传文件失败（IOException）不是业务错误，交给共通错误页。
+     */
+    @PostMapping("/import")
+    public String importCsv(@RequestParam(name = "file", required = false) MultipartFile file,
+                            Model model, RedirectAttributes ra) throws IOException {
+        // 没选文件时，浏览器发送的是文件名为空的 file。0 字节但选了文件的，交给 Service 报「文件是空的」
+        if (file == null || !StringUtils.hasText(file.getOriginalFilename())) {
+            model.addAttribute("error", "请选择 CSV 文件。");
+            return "trainees/import";
+        }
+        int count;
+        try (InputStream in = file.getInputStream()) {
+            count = service.importCsv(in);
+        } catch (CsvImportException e) {
+            // 必须写在 BusinessException 前面：CsvImportException 是它的子类
+            model.addAttribute("error", e.getMessage());
+            model.addAttribute("errors", e.getErrors());
+            return "trainees/import";
+        } catch (BusinessException e) {
+            model.addAttribute("error", e.getMessage());
+            return "trainees/import";
+        }
+        ra.addFlashAttribute("message", "已从 CSV 登记 " + count + " 名学员");
         return "redirect:/trainees";
     }
 
